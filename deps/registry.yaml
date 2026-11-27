@@ -47,7 +47,7 @@ packages:
     targets:
       windows_10_11_x64: unverified
       ubuntu_22_04_x64: unverified
-      macos_14_arm64: unverified
+      macos_15_arm64: unverified
     hashes: generated-per-target-in-wheelhouse-manifest.json
   python_compatibility:
     target: 3.11, 3.12, 3.13
@@ -73,7 +73,7 @@ packages:
     targets:
       windows_10_11_x64: unverified
       ubuntu_22_04_x64: unverified
-      macos_14_arm64: unverified
+      macos_15_arm64: unverified
     hashes: generated-per-target-in-wheelhouse-manifest.json
   python_compatibility:
     target: 3.11, 3.12, 3.13
@@ -99,7 +99,7 @@ packages:
     targets:
       windows_10_11_x64: unverified
       ubuntu_22_04_x64: unverified
-      macos_14_arm64: unverified
+      macos_15_arm64: unverified
     hashes: generated-per-target-in-wheelhouse-manifest.json
   python_compatibility:
     target: 3.11, 3.12, 3.13
@@ -125,7 +125,7 @@ packages:
     targets:
       windows_10_11_x64: unverified
       ubuntu_22_04_x64: unverified
-      macos_14_arm64: unverified
+      macos_15_arm64: unverified
     hashes: generated-per-target-in-wheelhouse-manifest.json
   python_compatibility:
     target: 3.11, 3.12, 3.13
@@ -151,7 +151,7 @@ packages:
     targets:
       windows_10_11_x64: unverified
       ubuntu_22_04_x64: unverified
-      macos_14_arm64: unverified
+      macos_15_arm64: unverified
     hashes: generated-per-target-in-wheelhouse-manifest.json
   python_compatibility:
     target: 3.11, 3.12, 3.13
@@ -177,7 +177,7 @@ packages:
     targets:
       windows_10_11_x64: unverified
       ubuntu_22_04_x64: unverified
-      macos_14_arm64: unverified
+      macos_15_arm64: unverified
     hashes: generated-per-target-in-wheelhouse-manifest.json
   python_compatibility:
     target: 3.11, 3.12, 3.13
@@ -203,7 +203,7 @@ packages:
     targets:
       windows_10_11_x64: unverified
       ubuntu_22_04_x64: unverified
-      macos_14_arm64: unverified
+      macos_15_arm64: unverified
     hashes: generated-per-target-in-wheelhouse-manifest.json
   python_compatibility:
     target: 3.11, 3.12, 3.13
@@ -228,7 +228,7 @@ packages:
     targets:
       windows_10_11_x64: unverified
       ubuntu_22_04_x64: unverified
-      macos_14_arm64: unverified
+      macos_15_arm64: unverified
     hashes: generated-per-target-in-wheelhouse-manifest.json
   python_compatibility:
     target: 3.11, 3.12, 3.13
@@ -269,7 +269,7 @@ packages:
     targets:
       windows_10_11_x64: unverified
       ubuntu_22_04_x64: unverified
-      macos_14_arm64: unverified
+      macos_15_arm64: unverified
     hashes: generated-per-target-in-wheelhouse-manifest.json
   python_compatibility:
     target: 3.11, 3.12, 3.13
@@ -295,7 +295,7 @@ packages:
     targets:
       windows_10_11_x64: unverified
       ubuntu_22_04_x64: unverified
-      macos_14_arm64: unverified
+      macos_15_arm64: unverified
     hashes: generated-per-target-in-wheelhouse-manifest.json
   python_compatibility:
     target: 3.11, 3.12, 3.13
@@ -321,7 +321,7 @@ packages:
     targets:
       windows_10_11_x64: unverified
       ubuntu_22_04_x64: unverified
-      macos_14_arm64: unverified
+      macos_15_arm64: unverified
     hashes: generated-per-target-in-wheelhouse-manifest.json
   python_compatibility:
     target: 3.11, 3.12, 3.13
@@ -347,7 +347,7 @@ packages:
     targets:
       windows_10_11_x64: unverified
       ubuntu_22_04_x64: unverified
-      macos_14_arm64: unverified
+      macos_15_arm64: unverified
     hashes: generated-per-target-in-wheelhouse-manifest.json
   python_compatibility:
     target: 3.11, 3.12, 3.13
@@ -373,7 +373,7 @@ packages:
     targets:
       windows_10_11_x64: unverified
       ubuntu_22_04_x64: unverified
-      macos_14_arm64: unverified
+      macos_15_arm64: unverified
     hashes: generated-per-target-in-wheelhouse-manifest.json
   python_compatibility:
     target: 3.11, 3.12, 3.13
@@ -399,7 +399,7 @@ packages:
     targets:
       windows_10_11_x64: unverified
       ubuntu_22_04_x64: unverified
-      macos_14_arm64: unverified
+      macos_15_arm64: unverified
     hashes: generated-per-target-in-wheelhouse-manifest.json
   python_compatibility:
     target: 3.11, 3.12, 3.13
