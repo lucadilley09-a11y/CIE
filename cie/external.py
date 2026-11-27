@@ -441,7 +441,8 @@ def audio_lufs(path: str) -> dict[str, Any]:
     sample peak (not oversampled true peak).
     """
     import numpy as np
-    from scipy.signal import lfilter
+    from math import gcd
+    from scipy.signal import lfilter, resample_poly
 
     from .audio import _read_wav
 
@@ -452,6 +453,13 @@ def audio_lufs(path: str) -> dict[str, Any]:
     if channels > 8:
         raise ValueError("LUFS measurement supports up to 8 channels.")
     samples = np.asarray(data, dtype=np.float64)
+    # The published coefficient set below is for 48 kHz. Resample other
+    # supported PCM rates to that reference rate before applying the filters.
+    original_rate = rate
+    if rate != 48000:
+        divisor = gcd(rate, 48000)
+        samples = resample_poly(samples, 48000 // divisor, rate // divisor, axis=0)
+        rate = 48000
     # ITU-R BS.1770 K-weighting: high-shelf followed by RLB high-pass.
     shelf_b = [1.53512485958697, -2.69169618940638, 1.19839281085285]
     shelf_a = [1.0, -1.69065929318241, 0.73248077421585]
@@ -486,7 +494,7 @@ def audio_lufs(path: str) -> dict[str, Any]:
         "data": {
             "integrated_lufs": round(integrated, 2) if np.isfinite(integrated) else None,
             "peak_dbfs": round(float(peak_dbfs), 2) if np.isfinite(peak_dbfs) else None,
-            "sample_rate": rate,
+            "sample_rate": original_rate,
             "channels": channels,
             "meter": "CIE BS.1770-style K-weighted block meter",
             "peak_type": "sample",
