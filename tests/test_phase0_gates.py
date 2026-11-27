@@ -17,7 +17,7 @@ from scripts.build_wheelhouse import (
 )
 from scripts.check_dependency_policy import (
     collect_dependency_tree, canonical_name, contains_forbidden_license,
-    direct_dependency_registry_issues,
+    direct_dependency_registry_issues, conditional_transitive_dependency_issues,
 )
 
 
@@ -277,6 +277,30 @@ def test_release_gate_requires_native_lgpl_component_approval() -> None:
     }
     issues = direct_dependency_registry_issues(registry, {"soundfile": "0.13.1"}, True)
     assert any("libsndfile" in issue and "not been explicitly approved" in issue for issue in issues)
+
+
+
+def test_conditional_transitive_license_requires_exact_registry_approval() -> None:
+    licenses = {"certifi": "MPL-2.0"}
+    versions = {"certifi": "2026.11.20"}
+    direct = {"mcp": "1.30.0"}
+    registry = {"policy": {"conditional_tier1_licenses": ["MPL-2.0"]}, "packages": []}
+    issues = conditional_transitive_dependency_issues(registry, licenses, versions, direct, True)
+    assert any("certifi" in issue and "missing from deps/registry.yaml" in issue for issue in issues)
+
+    registry["packages"] = [{
+        "name": "certifi", "version": "2026.11.20", "license": "MPL-2.0",
+        "tier": "transitive", "release_approved": False,
+    }]
+    issues = conditional_transitive_dependency_issues(registry, licenses, versions, direct, True)
+    assert any("certifi" in issue and "not been explicitly approved" in issue for issue in issues)
+
+    registry["packages"][0]["release_approved"] = True
+    assert conditional_transitive_dependency_issues(registry, licenses, versions, direct, True) == []
+
+    versions["certifi"] = "2027.1.0"
+    issues = conditional_transitive_dependency_issues(registry, licenses, versions, direct, True)
+    assert any("registry version 2026.11.20 does not match audited version 2027.1.0" in issue for issue in issues)
 
 
 def test_registry_direct_pin_and_approval_gate_is_fail_closed() -> None:
