@@ -115,9 +115,22 @@ def collect_runtime_license_files(stage: Path, project_name: str) -> dict[str, A
             })
         if not found:
             missing.append(f"{name}=={version}")
+        license_value = (
+            distribution.metadata.get("License-Expression")
+            or distribution.metadata.get("License")
+            or ""
+        ).strip()
+        if not license_value or license_value.upper() in {"UNKNOWN", "UNKNOWN LICENSE"}:
+            classifiers = [
+                value.rsplit(" :: ", 1)[-1]
+                for value in distribution.metadata.get_all("Classifier", [])
+                if value.startswith("License ::")
+            ]
+            license_value = classifiers[0] if classifiers else "NOASSERTION"
         manifest_entries.append({
             "name": name,
             "version": version,
+            "license": license_value,
             "license_files": sorted(found, key=lambda entry: entry["source_path"]),
         })
 
@@ -137,6 +150,103 @@ def collect_runtime_license_files(stage: Path, project_name: str) -> dict[str, A
     )
     return result
 
+
+
+
+def write_runtime_sbom(stage: Path, runtime_manifest: dict[str, Any]) -> dict[str, Any]:
+    """Generate a CycloneDX SBOM from the actual bundled runtime closure and native notices."""
+    project_name = str(runtime_manifest.get("project") or "creative-intelligence-engine")
+    project_version = "2.3.2.dev0"
+    root_ref = f"pkg:pypi/{canonical_name(project_name)}@{project_version}"
+    components: list[dict[str, Any]] = []
+    runtime_refs: list[str] = []
+    embedded: dict[tuple[str, str], dict[str, Any]] = {}
+    component_native_refs: dict[str, set[str]] = {}
+
+    notice_pattern = re.compile(
+        r"(?m)^Name:\s*(?P<name>[^\r\n]+)\s*\r?\n"
+        r"Files:\s*(?P<files>[^\r\n]+)\s*\r?\n"
+        r"(?:Description:\s*(?P<description>[^\r\n]+)\s*\r?\n)?"
+        r"Availability:\s*(?P<url>[^\r\n]+)\s*\r?\n"
+        r"License:\s*(?P<license>[^\r\n]+)"
+    )
+
+    for distribution in runtime_manifest.get("distributions", []):
+        name = str(distribution["name"])
+        version = str(distribution["version"])
+        license_value = str(distribution.get("license") or "NOASSERTION")
+        ref = f"pkg:pypi/{canonical_name(name)}@{version}"
+        runtime_refs.append(ref)
+        components.append({
+            "type": "library",
+            "bom-ref": ref,
+            "name": name,
+            "version": version,
+            "purl": ref,
+            "licenses": [{"license": {"name": license_value}}],
+            "properties": [{
+                "name": "cie:license-file-count",
+                "value": str(len(distribution.get("license_files") or [])),
+            }],
+        })
+        native_refs: set[str] = set()
+        for license_file in distribution.get("license_files") or []:
+            relative_path = str(license_file.get("path") or "")
+            notice_path = stage / Path(*PurePosixPath(relative_path).parts)
+            if not notice_path.is_file():
+                continue
+            notice_text = notice_path.read_text(encoding="utf-8", errors="replace")
+            for match in notice_pattern.finditer(notice_text):
+                native_name = match.group("name").strip()
+                native_license = match.group("license").strip()
+                native_key = (canonical_name(native_name), native_license)
+                native_ref = f"urn:cie:embedded:{native_key[0]}:{native_license}"
+                native_refs.add(native_ref)
+                native_record = embedded.setdefault(native_key, {
+                    "type": "library",
+                    "bom-ref": native_ref,
+                    "name": native_name,
+                    "licenses": [{"license": {"name": native_license}}],
+                    "properties": [
+                        {"name": "cie:source-url", "value": match.group("url").strip()},
+                        {"name": "cie:declared-files", "value": match.group("files").strip()},
+                    ],
+                })
+                native_record["properties"].append({
+                    "name": "cie:bundled-by",
+                    "value": f"{name}=={version}",
+                })
+        if native_refs:
+            component_native_refs[ref] = native_refs
+
+    components.extend(embedded[key] for key in sorted(embedded))
+    dependencies = [{"ref": root_ref, "dependsOn": sorted(runtime_refs)}]
+    dependencies.extend(
+        {"ref": ref, "dependsOn": sorted(native_refs)}
+        for ref, native_refs in sorted(component_native_refs.items())
+    )
+    sbom = {
+        "bomFormat": "CycloneDX",
+        "specVersion": "1.5",
+        "version": 1,
+        "metadata": {
+            "component": {
+                "type": "application",
+                "bom-ref": root_ref,
+                "name": project_name,
+                "version": project_version,
+                "licenses": [{"license": {"id": "MIT"}}],
+                "properties": [{
+                    "name": "cie:sbom-status",
+                    "value": "generated-from-actual-installed-runtime-closure-and-embedded-native-license-notices",
+                }],
+            }
+        },
+        "components": components,
+        "dependencies": dependencies,
+    }
+    (stage / "sbom.json").write_text(json.dumps(sbom, indent=2) + "\n", encoding="utf-8")
+    return sbom
 
 
 def collect_build_tool_license_files(stage: Path, distribution_name: str) -> dict[str, Any]:
@@ -220,7 +330,8 @@ def main() -> int:
         shutil.copy2(root / filename, stage / filename)
     # Preserve license/notice files for the installed runtime dependency closure,
     # including license and notice files for the remaining runtime dependency closure.
-    collect_runtime_license_files(stage, "creative-intelligence-engine")
+    runtime_license_manifest = collect_runtime_license_files(stage, "creative-intelligence-engine")
+    write_runtime_sbom(stage, runtime_license_manifest)
     collect_build_tool_license_files(stage, "pyinstaller")
     (stage / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     build_info: dict[str, Any] = {
