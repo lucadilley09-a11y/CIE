@@ -22,7 +22,7 @@
 - `.gitleaks.toml` allowlists only the intentional fake secrets in the redaction tests.
 
 ### Fixes
-- `scripts/check_dependency_policy.py` accepts both pipdeptree JSON shapes (flat `--json-tree` and `package`-wrapped), fixing the failing `test_dependency_tree_closure_is_recursive_and_normalized`.
+- Regression test that the dependency-policy parser accepts the flat pipdeptree `--json-tree` shape (parser fix itself landed separately as "Support pipdeptree JSON tree format").
 - Added `tests/test_phase0_registration_and_index.py` (10 regression tests).
 
 ## 2.3.2.dev0 — Phase 0 candidate (2026-11-26)
