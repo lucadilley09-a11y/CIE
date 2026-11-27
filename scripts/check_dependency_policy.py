@@ -112,19 +112,25 @@ def run_json(command: list[str]) -> Any:
 
 
 def collect_dependency_tree(tree: Any, root_name: str) -> dict[str, str]:
+    """Collect dependency closure from both pipdeptree JSON tree formats."""
     if not isinstance(tree, list):
         raise RuntimeError("pipdeptree JSON output must be a list")
+
+    def package_data(node: dict[str, Any]) -> dict[str, Any]:
+        nested = node.get("package")
+        return nested if isinstance(nested, dict) else node
+
     roots = [
         node for node in tree
         if isinstance(node, dict)
-        and canonical_name(str(node.get("package_name", ""))) == canonical_name(root_name)
+        and canonical_name(str(package_data(node).get("package_name", ""))) == canonical_name(root_name)
     ]
     if len(roots) != 1:
         raise RuntimeError(f"Expected exactly one installed root package named {root_name}; found {len(roots)}")
     found: dict[str, str] = {}
 
     def visit(node: dict[str, Any]) -> None:
-        package = node
+        package = package_data(node)
         name = str(package.get("package_name") or "").strip()
         version = str(package.get("installed_version") or "").strip()
         if not name or not version:
