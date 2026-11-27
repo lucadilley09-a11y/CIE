@@ -437,24 +437,6 @@ packages:
     status: not-approved-for-tier1
   python_compatibility:
     status: not-verified
-- name: libsndfile
-  version: null
-  license: LGPL-2.1-only
-  tier: 1-native-component
-  purpose: Native audio codec library potentially bundled by SoundFile wheels
-  verification: PENDING-wheel-content-inspection-and-LGPL-redistribution-review
-  release_approved: false
-  provenance:
-    verified: false
-    note: Native component identity and wheel inclusion must be verified by inspecting
-      the actual SoundFile wheel.
-  transitive_dependencies:
-    status: pending-wheel-content-inspection
-  wheel_availability:
-    status: pending-platform-wheel-content-inspection
-    hashes: per-target manifest
-  python_compatibility:
-    target: inherited from containing wheel; unverified
 - name: setuptools
   version: 84.2.1
   license: MIT
