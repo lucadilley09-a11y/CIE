@@ -435,22 +435,63 @@ def audio_sox_effect(source: str, output: str, effect: str, args: list[str] | No
 
 
 def audio_lufs(path: str) -> dict[str, Any]:
-    """Integrated loudness (LUFS, ITU-R BS.1770) and true peak. Pure Python, no external tool."""
+    """Measure integrated loudness using a CIE-owned BS.1770-style K-weighted meter.
+
+    Supports PCM WAV input and standard channel order. The reported peak is the
+    sample peak (not oversampled true peak).
+    """
     import numpy as np
-    import pyloudnorm as pyln
-    import soundfile as sf
+    from scipy.signal import lfilter
+
+    from .audio import _read_wav
 
     src, _ = resolve_in_projects(path)
-    data, rate = sf.read(str(src), always_2d=True)
-    if data.shape[0] < rate * 0.4:
+    data, rate, channels, _ = _read_wav(src)
+    if rate <= 0 or data.shape[0] < int(rate * 0.4):
         raise ValueError("Clip is shorter than 0.4 s; LUFS needs at least 400 ms.")
-    meter = pyln.Meter(rate)
-    loudness = float(meter.integrated_loudness(data))
-    peak = float(np.max(np.abs(data)))
-    peak_dbfs = 20 * np.log10(peak) if peak > 0 else float("-inf")
-    return {"status": "ok", "summary": f"{loudness:.1f} LUFS integrated, peak {peak_dbfs:.1f} dBFS",
-            "data": {"integrated_lufs": round(loudness, 2), "peak_dbfs": round(float(peak_dbfs), 2), "sample_rate": rate}}
-
+    if channels > 8:
+        raise ValueError("LUFS measurement supports up to 8 channels.")
+    samples = np.asarray(data, dtype=np.float64)
+    # ITU-R BS.1770 K-weighting: high-shelf followed by RLB high-pass.
+    shelf_b = [1.53512485958697, -2.69169618940638, 1.19839281085285]
+    shelf_a = [1.0, -1.69065929318241, 0.73248077421585]
+    highpass_b = [1.0, -2.0, 1.0]
+    highpass_a = [1.0, -1.99004745483398, 0.99007225036621]
+    weighted = lfilter(highpass_b, highpass_a, lfilter(shelf_b, shelf_a, samples, axis=0), axis=0)
+    channel_weights = np.array([1.0, 1.0, 1.0, 0.0, 1.41, 1.41, 1.41, 1.41][:channels])
+    block = max(1, int(round(rate * 0.4)))
+    hop = max(1, int(round(rate * 0.1)))
+    energies = []
+    for offset in range(0, len(weighted) - block + 1, hop):
+        frame = weighted[offset:offset + block]
+        per_channel = np.mean(frame * frame, axis=0)
+        energies.append(float(np.sum(per_channel * channel_weights)))
+    if not energies:
+        raise ValueError("Audio does not contain a complete 400 ms measurement block.")
+    energies_array = np.asarray(energies, dtype=np.float64)
+    loudness_blocks = -0.691 + 10.0 * np.log10(np.maximum(energies_array, 1e-20))
+    absolute = energies_array[loudness_blocks > -70.0]
+    if absolute.size == 0:
+        integrated = float("-inf")
+    else:
+        preliminary = -0.691 + 10.0 * np.log10(float(np.mean(absolute)))
+        relative_gate = preliminary - 10.0
+        gated = energies_array[(loudness_blocks > -70.0) & (loudness_blocks > relative_gate)]
+        integrated = (-0.691 + 10.0 * np.log10(float(np.mean(gated)))) if gated.size else float("-inf")
+    peak = float(np.max(np.abs(samples))) if samples.size else 0.0
+    peak_dbfs = 20.0 * np.log10(peak) if peak > 0 else float("-inf")
+    return {
+        "status": "ok",
+        "summary": f"{integrated:.1f} LUFS integrated, sample peak {peak_dbfs:.1f} dBFS",
+        "data": {
+            "integrated_lufs": round(integrated, 2) if np.isfinite(integrated) else None,
+            "peak_dbfs": round(float(peak_dbfs), 2) if np.isfinite(peak_dbfs) else None,
+            "sample_rate": rate,
+            "channels": channels,
+            "meter": "CIE BS.1770-style K-weighted block meter",
+            "peak_type": "sample",
+        },
+    }
 
 # ---------- Local semantic search ----------
 
