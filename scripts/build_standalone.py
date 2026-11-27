@@ -187,7 +187,7 @@ def main() -> int:
     for filename in ("sbom.json", "LICENSE"):
         shutil.copy2(root / filename, stage / filename)
     # Preserve license/notice files for the installed runtime dependency closure,
-    # including SoundFile's bundled libsndfile COPYING notice where present.
+    # including license and notice files for the remaining runtime dependency closure.
     collect_runtime_license_files(stage, "creative-intelligence-engine")
     (stage / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     build_info: dict[str, Any] = {
