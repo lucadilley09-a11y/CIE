@@ -103,6 +103,41 @@ def direct_dependency_registry_issues(
     return issues
 
 
+
+def conditional_transitive_dependency_issues(
+    registry: dict[str, Any],
+    dependency_licenses: dict[str, str],
+    direct_pins: dict[str, str],
+    require_release_approval: bool,
+) -> list[str]:
+    """Require explicit registry review for conditional-license transitive packages."""
+    if not require_release_approval:
+        return []
+    package_registry = {
+        canonical_name(str(item["name"])): item
+        for item in registry.get("packages", [])
+        if isinstance(item, dict) and item.get("name")
+    }
+    conditional = set((registry.get("policy") or {}).get("conditional_tier1_licenses") or [])
+    direct_names = set(direct_pins)
+    issues: list[str] = []
+    for name, license_name in sorted(dependency_licenses.items()):
+        if name in direct_names or license_name not in conditional:
+            continue
+        entry = package_registry.get(name)
+        if entry is None:
+            issues.append(
+                f"Conditional-license transitive dependency {name} ({license_name}) "
+                "is missing from deps/registry.yaml"
+            )
+        elif entry.get("release_approved") is not True:
+            issues.append(
+                f"Conditional-license transitive dependency {name} ({license_name}) "
+                "has not been explicitly approved for release"
+            )
+    return issues
+
+
 def run_json(command: list[str]) -> Any:
     completed = subprocess.run(command, check=True, capture_output=True, text=True)
     try:
@@ -197,6 +232,10 @@ def main() -> int:
         elif license_name not in allowed and license_name not in conditional:
             issues.append(f"License not allowlisted for {name}=={version}: {license_name}")
         audited_rows.append({"name": name, "version": version, "license": license_name})
+
+    issues.extend(conditional_transitive_dependency_issues(
+        registry, licenses, direct, ns.require_release_approval
+    ))
 
     report = {
         "project": project_name,
