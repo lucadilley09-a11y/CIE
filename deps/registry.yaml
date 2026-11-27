@@ -13,6 +13,9 @@ policy:
   conditional_tier1_licenses:
   - LGPL-2.1-only
   - MPL-2.0
+  - LGPL-2.1-or-later
+  - GPL-3.0-with-GCC-exception
+  - BSD-3-Clause-Attribution
   require_release_approval: true
   forbid_tier1_licenses:
   - GPL-2.0-only
@@ -254,6 +257,102 @@ packages:
       ubuntu_22_04_x64: unverified
       macos_15_arm64: unverified
     hashes: generated-per-target-in-wheelhouse-manifest.json
+  python_compatibility:
+    target: 3.11, 3.12, 3.13
+    verified: false
+- name: OpenBLAS
+  version: null
+  license: BSD-3-Clause-Attribution
+  tier: 1-native-component
+  purpose: Native BLAS/LAPACK library bundled in NumPy/SciPy platform wheels
+  verification: embedded-wheel-notice-observed; attribution and redistribution review pending
+  release_approved: false
+  provenance:
+    intended_source: https://github.com/OpenMathLib/OpenBLAS/
+    verified: false
+    note: Source link is from wheel license notice; upstream build provenance and exact binary mapping require review.
+  transitive_dependencies:
+    status: bundled-native-component
+    evidence_file: platform-wheelhouse-evidence.json
+  wheel_availability:
+    status: observed-in-platform-wheel-license-notices
+    targets:
+      ubuntu_22_04_x64: pending-evidence
+      windows_10_11_x64: pending-evidence
+      macos_15_arm64: observed
+    hashes: recorded-in-platform-wheelhouse-evidence.json
+  python_compatibility:
+    target: 3.11, 3.12, 3.13
+    verified: false
+- name: LAPACK
+  version: null
+  license: BSD-3-Clause-Attribution
+  tier: 1-native-component
+  purpose: Linear algebra routines bundled through OpenBLAS in NumPy/SciPy wheels
+  verification: embedded-wheel-notice-observed; attribution and redistribution review pending
+  release_approved: false
+  provenance:
+    intended_source: https://github.com/OpenMathLib/OpenBLAS/
+    verified: false
+    note: Source link is from wheel license notice; upstream build provenance and exact binary mapping require review.
+  transitive_dependencies:
+    status: bundled-native-component
+    evidence_file: platform-wheelhouse-evidence.json
+  wheel_availability:
+    status: observed-in-platform-wheel-license-notices
+    targets:
+      ubuntu_22_04_x64: pending-evidence
+      windows_10_11_x64: pending-evidence
+      macos_15_arm64: observed
+    hashes: recorded-in-platform-wheelhouse-evidence.json
+  python_compatibility:
+    target: 3.11, 3.12, 3.13
+    verified: false
+- name: GCC runtime library
+  version: null
+  license: GPL-3.0-with-GCC-exception
+  tier: 1-native-component
+  purpose: GCC runtime libraries dynamically linked into NumPy/SciPy native wheels
+  verification: embedded-wheel-notice-observed; GCC Runtime Library Exception review pending
+  release_approved: false
+  provenance:
+    intended_source: https://gcc.gnu.org/git/?p=gcc.git;a=tree;f=libgfortran
+    verified: false
+    note: Wheel notice identifies GCC runtime library and exception; exact binary/source build provenance remains pending.
+  transitive_dependencies:
+    status: bundled-native-component
+    evidence_file: platform-wheelhouse-evidence.json
+  wheel_availability:
+    status: observed-in-platform-wheel-license-notices
+    targets:
+      ubuntu_22_04_x64: pending-evidence
+      windows_10_11_x64: pending-evidence
+      macos_15_arm64: observed
+    hashes: recorded-in-platform-wheelhouse-evidence.json
+  python_compatibility:
+    target: 3.11, 3.12, 3.13
+    verified: false
+- name: libquadmath
+  version: null
+  license: LGPL-2.1-or-later
+  tier: 1-native-component
+  purpose: GCC quad-precision runtime library bundled in NumPy/SciPy native wheels
+  verification: embedded-wheel-notice-observed; LGPL dynamic-linking and redistribution review pending
+  release_approved: false
+  provenance:
+    intended_source: https://gcc.gnu.org/git/?p=gcc.git;a=tree;f=libquadmath
+    verified: false
+    note: Wheel notice identifies libquadmath; exact binary/source build provenance remains pending.
+  transitive_dependencies:
+    status: bundled-native-component
+    evidence_file: platform-wheelhouse-evidence.json
+  wheel_availability:
+    status: observed-in-platform-wheel-license-notices
+    targets:
+      ubuntu_22_04_x64: pending-evidence
+      windows_10_11_x64: pending-evidence
+      macos_15_arm64: observed
+    hashes: recorded-in-platform-wheelhouse-evidence.json
   python_compatibility:
     target: 3.11, 3.12, 3.13
     verified: false
