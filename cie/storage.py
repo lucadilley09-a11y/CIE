@@ -161,6 +161,30 @@ CREATE TABLE IF NOT EXISTS asset_meta (
 );
 CREATE INDEX IF NOT EXISTS idx_assets_project ON asset_meta(project_id, kind);
 
+-- Phase 2.1 code intelligence: definitions with spans/complexity, and call sites.
+CREATE TABLE IF NOT EXISTS code_defs (
+    path TEXT NOT NULL,
+    project_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    qualifier TEXT NOT NULL DEFAULT '',
+    kind TEXT NOT NULL,
+    line_start INTEGER NOT NULL,
+    line_end INTEGER NOT NULL,
+    exported INTEGER NOT NULL DEFAULT 0,
+    complexity INTEGER NOT NULL DEFAULT 1,
+    params INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_code_defs_name ON code_defs(project_id, name);
+CREATE INDEX IF NOT EXISTS idx_code_defs_path ON code_defs(path);
+CREATE TABLE IF NOT EXISTS code_calls (
+    path TEXT NOT NULL,
+    project_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    line INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_code_calls_name ON code_calls(project_id, name);
+CREATE INDEX IF NOT EXISTS idx_code_calls_path ON code_calls(path);
+
 -- Per-project index schema version. When CIE's indexer changes what it
 -- extracts, bumping INDEX_VERSION forces one full re-index (safe migration).
 CREATE TABLE IF NOT EXISTS index_meta (

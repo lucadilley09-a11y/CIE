@@ -54,6 +54,16 @@ ALTERNATIVES = {
 
 # Plain-language words → capability areas/ids that handle them.
 SYNONYMS: dict[str, list[str]] = {
+    # Phase 3 creative studio
+    "character": ["character", "rig", "animation"], "characters": ["character", "rig"], "animate": ["animation", "keyframes"],
+    "animation": ["animation"], "animations": ["animation"], "walk": ["animation", "character"], "run": ["animation"],
+    "rig": ["rig", "skinning"], "rigged": ["rig"], "skeleton": ["rig"], "lowpoly": ["lowpoly", "procedural"],
+    "prop": ["props", "lowpoly"], "props": ["props", "lowpoly"], "tree": ["lowpoly", "procedural"], "rock": ["lowpoly", "procedural"],
+    "house": ["lowpoly"], "sword": ["lowpoly"], "pixel": ["pixel"], "pixelart": ["pixel"], "8-direction": ["8-direction"],
+    "directions": ["8-direction"], "spritesheet": ["spritesheet", "atlas"], "gif": ["gif", "animation"], "icon": ["icon", "vector"],
+    "svg": ["svg", "vector"], "vector": ["vector"], "ui": ["ui", "9-slice"], "button": ["ui"], "background": ["background", "edit"],
+    "ambience": ["ambience"], "ambient": ["ambience"], "loop": ["loop"], "song": ["music"], "midi": ["midi"],
+    "footstep": ["sfx"], "explosion": ["sfx"], "preview": ["preview", "qa"], "place": ["export"], "terrain": ["tileset", "tile"],
     "sprite": ["art", "sprite", "atlas", "png", "2d"], "sprites": ["art", "sprite", "atlas", "2d"],
     "texture": ["art", "tile", "png", "palette"], "textures": ["art", "tile", "png"],
     "image": ["art", "image", "png"], "images": ["art", "image", "png"], "png": ["png", "art"],
@@ -66,7 +76,14 @@ SYNONYMS: dict[str, list[str]] = {
     "polygons": ["mesh", "simplify"], "lod": ["simplify", "mesh"],
     "bug": ["coding", "stack", "errors"], "error": ["errors", "stack", "coding"], "errors": ["errors", "stack"],
     "crash": ["stack", "errors"], "traceback": ["stack"], "log": ["errors", "dedupe", "log"],
-    "test": ["tests", "coding"], "tests": ["tests"], "coverage": ["coverage"],
+    "test": ["tests", "test", "coding"], "tests": ["tests", "test"], "coverage": ["coverage"],
+    "review": ["review", "code"], "lint": ["lint", "review"], "unused": ["unused"], "dead": ["unused"],
+    "copy": ["duplicates"], "complex": ["complexity"], "complexity": ["complexity"],
+    "callers": ["callers"], "calls": ["callers"], "called": ["callers"], "graph": ["graph"], "modules": ["graph"],
+    "refactor": ["review", "complexity", "duplicates", "workspace"], "cleanup": ["unused", "duplicates", "review"],
+    "fix": ["fix", "review", "dev"], "experiment": ["workspace"], "workspace": ["workspace"], "safely": ["workspace", "snapshot"],
+    "feature": ["dev", "workflow"], "implement": ["dev", "workflow"], "minecraft": ["java", "kotlin", "minecraft"],
+    "mod": ["java", "kotlin", "minecraft"], "exploit": ["review", "roblox"], "remote": ["review", "roblox"],
     "security": ["security"], "secrets": ["security", "gitleaks"], "vulnerability": ["deps", "audit"],
     "dependencies": ["dependencies", "deps"], "imports": ["dependencies"],
     "function": ["symbol"], "class": ["symbol"], "where": ["search", "symbol"], "find": ["search", "symbol"],

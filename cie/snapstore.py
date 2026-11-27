@@ -806,11 +806,13 @@ PATH_ARG_KEYS = (
 )
 # These only change CIE's own config, vault, or store (or snapshot for
 # themselves, like storage.restore), so an extra project snapshot adds nothing.
-SKIP_AUTO_SNAPSHOT_PREFIXES = ("project.", "memory.", "workflow.", "core.", "models.", "knowledge.", "routing.")
+SKIP_AUTO_SNAPSHOT_PREFIXES = ("project.", "memory.", "workflow.", "core.", "models.", "knowledge.", "routing.",
+                               "workspace.")  # workspace.promote snapshots its own targets
 SKIP_AUTO_SNAPSHOT_IDS = {
     "coding.record_fix", "storage.restore", "storage.prune_apply", "storage.archive_restore",
     "templates.save",  # writes CIE's template library only
     "templates.apply",  # takes its own snapshot that also records the new files
+    "code.fix_apply",  # snapshots exactly the files it edits
 }
 
 

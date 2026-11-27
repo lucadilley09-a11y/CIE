@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.3.2.dev0: Phase 3 creative studio (2026-11-27)
+
+See `PHASE3_PROGRESS.md`. Native 3D modelling (primitives, edit ops, UV unwrap, PBR materials, baked textures, validation, OBJ/STL/glTF/GLB I/O, software preview renderer) and 12 low-poly generators; R15-style rigged characters with IK locomotion and motion-quality metrics, custom keyframes, blends, auto-rigging and prop animation; OKLCH palettes, layered pixel drawing, 8-direction sprites from 3D, seamless textures and dual-grid tilesets, UI kit, 2D animation, vector art and image editing; 20 SFX, ambience loops, music with MIDI, 27 audio edit ops and BS.1770 loudness. Every tool returns a preview sheet; new `cie_view` MCP tool shows it to Claude. Outputs stay in CIE's studio folder until `studio.place` (approval-gated) copies them into a project. 173 capabilities.
+
+## 2.3.2.dev0: Phase 2 coding intelligence (2026-11-27)
+
+See `PHASE2_PROGRESS.md`. Comment- and string-aware scanning for Luau, JS, Java/Kotlin, and Python; definitions, complexity, and call sites in the unified index (index version 4); callers, module graph with Roblox require chains, unused code, duplicates, complexity, and public API; 22 review rules with approve-to-apply diff fixes; unified test runner (pytest, npm/node, Gradle, static checks); disposable workspaces; `dev.workflow`.
+
 ## 2.3.2.dev0: Phase 1 core and storage (2026-11-27)
 
 See `PHASE1_PROGRESS.md` for the full report.

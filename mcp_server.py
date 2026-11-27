@@ -21,6 +21,10 @@ def cie_discover(area: str = "", keyword: str = "", project: str = "") -> dict[s
     For project context, start with cie_run("knowledge.summary", {"project_id": ...}).
     Before editing project files directly, call cie_run("storage.snapshot", {"paths": [...]}) so the
     change can be undone with storage.restore_preview and storage.restore.
+    Creative studio (areas 3d, animation, 2d, audio, studio): mesh.generate / mesh.build for 3D,
+    rig.character for animated characters, pixel.* and image.* for 2D, sound.* for audio. Every
+    creative tool returns a 'preview' sheet: look at it with cie_view before calling the asset done,
+    then copy it into the game with studio.place.
     """
     caps = get_registry().discover(area=area, keyword=keyword, project=project)
     return {
@@ -47,6 +51,20 @@ def cie_run(
         permission_mode="auto",
         approved=False,
     )
+
+
+def cie_view(path: str, max_size: int = 1024) -> Any:
+    """Look at an image: a CIE preview sheet (studio.review / any creative tool's 'preview'), a sprite,
+    texture or render from the studio, or an image in a registered project. Read-only.
+    Use it before calling a creative asset done."""
+    from cie.studio import load_view
+
+    data, info = load_view(path, max_size)
+    try:
+        from mcp.server.fastmcp import Image as McpImage
+    except ImportError:  # outside the MCP runtime (tests, CLI): return the raw bytes and info
+        return {"png_bytes": len(data), **info}
+    return McpImage(data=data, format="png")
 
 
 def cie_memory(
@@ -150,6 +168,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     mcp.tool()(cie_run)
     mcp.tool()(cie_memory)
     mcp.tool()(cie_status)
+    mcp.tool()(cie_view)
 
     @mcp.resource("cie://catalog")
     def _res_catalog() -> str:

@@ -49,9 +49,11 @@ CODE_LANGS = {
     "python", "javascript", "typescript", "csharp", "cpp", "c", "rust", "go",
     "java", "gdscript", "lua", "luau", "kotlin",
 }
+# Languages with full definition/call scanning (cie.codescan).
+SCAN_LANGS = {"python", "javascript", "typescript", "java", "kotlin", "lua", "luau"}
 
 # Bump when the indexer extracts new kinds of data; triggers one full re-index.
-INDEX_VERSION = 3  # 3: asset metadata (Phase 1.4)
+INDEX_VERSION = 4  # 3: asset metadata (Phase 1.4); 4: code defs/calls (Phase 2.1)
 
 TEXT_EXTS = set(LANG_MAP.keys()) | {".txt", ".ini", ".cfg", ".xml", ".html", ".css", ".sql", ".sh", ".bat", ".ps1"}
 
@@ -65,6 +67,7 @@ def incremental_index(project_id: str = "") -> dict[str, Any]:
     dependencies. Re-indexes only changed files and removes deleted ones.
     A project indexed by an older INDEX_VERSION gets one full re-index."""
     from .coding import extract_dependencies, extract_symbols
+    from .codescan import scan
     from .knowledge import ASSET_EXTS, extract_asset_meta, write_asset_meta
 
     cfg = load_config()
@@ -153,6 +156,8 @@ def incremental_index(project_id: str = "") -> dict[str, Any]:
                 conn.execute("DELETE FROM files_fts WHERE file_path = ?", (sp,))
                 conn.execute("DELETE FROM symbols_index WHERE file_path = ?", (sp,))
                 conn.execute("DELETE FROM dependencies_index WHERE source_file = ?", (sp,))
+                conn.execute("DELETE FROM code_defs WHERE path = ?", (sp,))
+                conn.execute("DELETE FROM code_calls WHERE path = ?", (sp,))
                 if fpath.suffix.lower() in ASSET_EXTS:
                     write_asset_meta(conn, sp, pid, extract_asset_meta(fpath))
                 if content:
@@ -168,6 +173,18 @@ def incremental_index(project_id: str = "") -> dict[str, Any]:
                                     (sp, pid, sym["name"], sym["kind"], sym["line_start"], sym["line_end"]),
                                 )
                                 symbols_written += 1
+                            if lang in SCAN_LANGS:
+                                scanned = scan(content, lang)
+                                conn.executemany(
+                                    "INSERT INTO code_defs(path, project_id, name, qualifier, kind, line_start, line_end, exported, complexity, params) "
+                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                                    [(sp, pid, d.name, d.qualifier, d.kind, d.line_start, d.line_end, int(d.exported), d.complexity, d.params)
+                                     for d in scanned.definitions],
+                                )
+                                conn.executemany(
+                                    "INSERT INTO code_calls(path, project_id, name, line) VALUES (?, ?, ?, ?)",
+                                    [(sp, pid, name, line) for name, line in scanned.calls],
+                                )
                             for dep in extract_dependencies(fpath, content):
                                 conn.execute(
                                     "INSERT INTO dependencies_index(source_file, target, kind, confidence, project_id) VALUES (?, ?, ?, ?, ?)",
@@ -184,6 +201,8 @@ def incremental_index(project_id: str = "") -> dict[str, Any]:
                 conn.execute("DELETE FROM symbols_index WHERE file_path = ?", (old_path,))
                 conn.execute("DELETE FROM dependencies_index WHERE source_file = ?", (old_path,))
                 conn.execute("DELETE FROM asset_meta WHERE path = ?", (old_path,))
+                conn.execute("DELETE FROM code_defs WHERE path = ?", (old_path,))
+                conn.execute("DELETE FROM code_calls WHERE path = ?", (old_path,))
                 removed += 1
             # Rows left by an earlier, unscoped writer for this project.
             conn.execute(

@@ -328,6 +328,20 @@ def register_all_capabilities(reg: CapabilityRegistry) -> None:
     routing.register_capabilities(reg)
     from . import templates
     templates.register_capabilities(reg)
+    from . import codeintel
+    codeintel.register_capabilities(reg)
+    from . import review
+    review.register_capabilities(reg)
+    from . import devtools
+    devtools.register_capabilities(reg)
+    # Phase 3: creative studio (all outputs go to CIE's studio folder; studio.place copies into a project)
+    from . import lowpoly, mesh3d, pixel, rig, studio, synth
+    studio.register_capabilities(reg)
+    mesh3d.register_capabilities(reg)
+    lowpoly.register_capabilities(reg)
+    rig.register_capabilities(reg)
+    pixel.register_capabilities(reg)
+    synth.register_capabilities(reg)
 
     def _batch_handler(args: dict[str, Any]) -> dict[str, Any]:
         ops = args.get("operations") or []
@@ -362,4 +376,4 @@ def register_all_capabilities(reg: CapabilityRegistry) -> None:
             handler=_batch_handler,
             tags=["batch", "efficiency"],
         )
-    )
+    )

@@ -102,11 +102,25 @@ def extract_dependencies(path: Path, text: str | None = None) -> list[dict[str, 
             elif isinstance(node, ast.ImportFrom) and node.module:
                 edges.append({"target": node.module, "kind": "from_import", "confidence": "exact"})
         return edges
+    if lang in {"lua", "luau"}:
+        # Balance parentheses so nested calls such as
+        # require(game:GetService("ReplicatedStorage"):WaitForChild("Util")) are kept whole.
+        from .codescan import mask
+
+        masked = mask(content, "lua")
+        for m in re.finditer(r"\brequire\s*\(", masked):
+            depth, j = 1, m.end()
+            while j < len(masked) and depth:
+                if masked[j] == "(":
+                    depth += 1
+                elif masked[j] == ")":
+                    depth -= 1
+                j += 1
+            target = content[m.end():j - 1].strip().strip("'\" ")
+            if target:
+                edges.append({"target": target, "kind": "require", "confidence": "inferred"})
+        return edges
     for line in content.splitlines():
-        if lang in {"lua", "luau"}:
-            for m in LUA_REQUIRE_RE.finditer(line):
-                edges.append({"target": m.group(1).strip("'\" "), "kind": "require", "confidence": "inferred"})
-            continue
         if lang in {"javascript", "typescript"}:
             m = JS_FROM_RE.match(line) or JS_BARE_IMPORT_RE.match(line)
             if m:

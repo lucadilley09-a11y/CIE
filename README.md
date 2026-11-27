@@ -74,6 +74,17 @@ CIE Phase 0 remains open until direct and transitive package audits, CI evidence
 - **Plans:** `orchestrate.plan` turns a plain request into CIE steps; `orchestrate.run` runs them.
 - **Templates:** `templates.list` shows ready-made starters, including a Hearth-ready browser game.
 
+## Phase 3 creative studio
+
+Built in, with no Blender, AI models or paid services needed:
+
+- **3D:** `mesh.generate` makes low-poly props (tree, rock, barrel, crate, house, fence, sword, chest, crystal, potion, lamp post, mushroom); `mesh.build` builds anything from parts and edit ops, with PBR materials, UVs and a baked texture. GLB, glTF, OBJ and STL in and out.
+- **Animation:** `rig.character` makes a rigged R15-style character with idle, walk, run, jump, wave and attack clips; walk and run use IK, so planted feet don't slide. Custom keyframes, blends, retiming, mirroring, auto-rigging and prop animation.
+- **2D:** OKLCH palettes, layered pixel drawing, 8-direction sprite sheets rendered from 3D characters, seamless textures and tilesets, a 9-slice UI kit, frame animation and GIFs, vector art (SVG), and image editing including background removal.
+- **Audio:** 20 SFX types with seeded variations, seamless ambience loops, loopable music with a MIDI file, and a full editing chain with LUFS loudness.
+
+Every tool checks its own output and returns a preview sheet. Claude looks at it with the `cie_view` tool before calling an asset done. Results go to CIE's studio folder; `studio.place` copies one into your game after you approve. See [`PHASE3_PROGRESS.md`](PHASE3_PROGRESS.md).
+
 ## Safety defaults
 
 CIE defaults to `assist` autonomy. Read operations can run without approval; writes, execution, and destructive operations are subject to the permission policy and explicit owner approval.
