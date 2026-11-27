@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: cie-release-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   platform-wheelhouses:
     name: Runtime wheel evidence (${{ matrix.os }})
