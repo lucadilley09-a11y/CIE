@@ -33,6 +33,46 @@ def _version_key(path: Path) -> tuple:
     return tuple(int(x or 0) for x in m.groups()) if m else (0, 0, 0)
 
 
+def _blender_from_registry() -> list[Path]:
+    """Where Windows says Blender is: the installer's uninstall entries and the .blend file association."""
+    try:
+        import winreg  # type: ignore[import-not-found]
+    except ImportError:
+        return []
+    out: list[Path] = []
+    roots = [(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"),
+             (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"),
+             (winreg.HKEY_CURRENT_USER, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall")]
+    for hive, path in roots:
+        try:
+            with winreg.OpenKey(hive, path) as key:
+                for i in range(winreg.QueryInfoKey(key)[0]):
+                    try:
+                        with winreg.OpenKey(key, winreg.EnumKey(key, i)) as sub:
+                            name = str(winreg.QueryValueEx(sub, "DisplayName")[0])
+                            if "blender" not in name.lower():
+                                continue
+                            loc = str(winreg.QueryValueEx(sub, "InstallLocation")[0])
+                            if loc and (Path(loc) / "blender.exe").is_file():
+                                out.append(Path(loc) / "blender.exe")
+                    except OSError:
+                        continue
+        except OSError:
+            continue
+    for cls in (r"blendfile\shell\open\command", r"Applications\blender.exe\shell\open\command",
+                r"Applications\blender-launcher.exe\shell\open\command"):
+        try:
+            with winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, cls) as key:
+                cmd = str(winreg.QueryValueEx(key, "")[0])
+            exe = cmd.split('"')[1] if cmd.startswith('"') else cmd.split(" ")[0]
+            p = Path(exe).with_name("blender.exe")
+            if p.is_file():
+                out.append(p)
+        except (OSError, IndexError):
+            continue
+    return out
+
+
 def blender_candidates() -> list[Path]:
     """Usual Windows install places, newest first: the official installer, Steam, the portable zip
     in Downloads/Desktop, and Blender Launcher builds."""
@@ -57,6 +97,7 @@ def blender_candidates() -> list[Path]:
         if extra.is_dir():
             found += [p for p in extra.glob("blender-*/blender.exe") if p.is_file()]
             found += [p for p in extra.glob("*/blender-*/blender.exe") if p.is_file()]
+    found += _blender_from_registry()
     seen, unique = set(), []
     for p in sorted(found, key=_version_key, reverse=True):
         if str(p).lower() not in seen:

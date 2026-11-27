@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import posixpath
 import re
 import time
 import zipfile
@@ -58,17 +59,17 @@ def check(path: str) -> dict[str, Any]:
     missing, wrong_case = [], []
     for k, data in texts.items():
         text = data.decode("utf-8", "replace")
-        base = (d / k).parent
         for m in ASSET_RE.finditer(text):
             ref = (m.group(1) or m.group(2) or "").strip()
             if not ref or ref.startswith(("http:", "https:", "data:", "//", "mailto:", "javascript:", "#", "${")) or "{" in ref:
                 continue
             if "hearth-connect.js" in ref or ref.endswith("/"):
                 continue
-            target = (base / ref).resolve() if not ref.startswith("/") else (d / ref.lstrip("/")).resolve()
-            try:
-                key = target.relative_to(d.resolve()).as_posix()
-            except ValueError:
+            # Work on the path text, not the filesystem: Windows would quietly match 'hero.png' to 'Hero.png'.
+            base_rel = posixpath.dirname(k)
+            joined = ref.lstrip("/") if ref.startswith("/") else posixpath.join(base_rel, ref)
+            key = posixpath.normpath(joined)
+            if key.startswith("../") or key == "..":
                 continue  # outside the game folder (e.g. ../../sdk/) - not ours to check
             if key in rel:
                 continue
