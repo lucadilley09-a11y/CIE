@@ -9,8 +9,59 @@ permissions:
   contents: read
 
 jobs:
+  platform-wheelhouses:
+    name: Runtime wheel evidence (\${{ matrix.os }})
+    runs-on: \${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-2022, macos-15]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pinned build tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r build-system-requirements.txt
+      - name: Build runtime wheelhouse and hash manifest
+        run: python scripts/build_wheelhouse.py --output wheelhouse
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cie-wheelhouse-\${{ matrix.os }}
+          path: wheelhouse/
+          if-no-files-found: error
+          retention-days: 90
+
+  verify-platform-wheelhouses:
+    name: Verify cross-platform wheel evidence
+    needs: platform-wheelhouses
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Download all platform wheelhouses
+        uses: actions/download-artifact@v4
+        with:
+          pattern: cie-wheelhouse-*
+          path: wheelhouses
+          merge-multiple: false
+      - name: Verify hashes, exact pins, licenses, and native notices
+        run: python scripts/verify_wheelhouse_evidence.py --wheelhouses wheelhouses --output dependency-audit/platform-wheelhouse-evidence.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cie-platform-wheelhouse-evidence
+          path: dependency-audit/
+          if-no-files-found: warn
+          retention-days: 90
+
   dependency-audit:
     name: Dependency, vulnerability, and license audit
+    needs: verify-platform-wheelhouses
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -41,10 +92,10 @@ jobs:
           retention-days: 90
 
   standalone-bundles:
-    name: Standalone release bundle (${{ matrix.os }})
+    name: Standalone release bundle (\${{ matrix.os }})
     needs: dependency-audit
     if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ${{ matrix.os }}
+    runs-on: \${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
@@ -62,7 +113,7 @@ jobs:
         run: python scripts/build_standalone.py --output release-packages
       - uses: actions/upload-artifact@v4
         with:
-          name: cie-release-${{ matrix.os }}
+          name: cie-release-\${{ matrix.os }}
           path: release-packages/*.mcpb
           if-no-files-found: error
           retention-days: 90
