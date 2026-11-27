@@ -10,8 +10,8 @@ permissions:
 
 jobs:
   platform-wheelhouses:
-    name: Runtime wheel evidence (\${{ matrix.os }})
-    runs-on: \${{ matrix.os }}
+    name: Runtime wheel evidence (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
@@ -29,7 +29,7 @@ jobs:
         run: python scripts/build_wheelhouse.py --output wheelhouse
       - uses: actions/upload-artifact@v4
         with:
-          name: cie-wheelhouse-\${{ matrix.os }}
+          name: cie-wheelhouse-${{ matrix.os }}
           path: wheelhouse/
           if-no-files-found: error
           retention-days: 90
@@ -92,10 +92,10 @@ jobs:
           retention-days: 90
 
   standalone-bundles:
-    name: Standalone release bundle (\${{ matrix.os }})
+    name: Standalone release bundle (${{ matrix.os }})
     needs: dependency-audit
     if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: \${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
@@ -113,7 +113,7 @@ jobs:
         run: python scripts/build_standalone.py --output release-packages
       - uses: actions/upload-artifact@v4
         with:
-          name: cie-release-\${{ matrix.os }}
+          name: cie-release-${{ matrix.os }}
           path: release-packages/*.mcpb
           if-no-files-found: error
           retention-days: 90
