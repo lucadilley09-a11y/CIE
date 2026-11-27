@@ -261,6 +261,30 @@ packages:
     target: 3.11, 3.12, 3.13
     verified: false
     note: Must pass the CI matrix and actual target wheel build.
+- name: networkx
+  version: 3.7
+  license: BSD-3-Clause
+  tier: 1
+  purpose: Graph operations required by trimesh mesh repair
+  verification: metadata-and-source-not-independently-audited
+  release_approved: false
+  provenance:
+    intended_distribution: PyPI
+    verified: false
+    note: Distribution source and artifact provenance remain pending review.
+  transitive_dependencies:
+    status: pending-installed-environment-audit
+    evidence_file: pipdeptree JSON and dependency-policy-report.json
+  wheel_availability:
+    status: pending-platform-build
+    targets:
+      windows_10_11_x64: unverified
+      ubuntu_22_04_x64: unverified
+      macos_14_arm64: unverified
+    hashes: generated-per-target-in-wheelhouse-manifest.json
+  python_compatibility:
+    target: 3.11, 3.12, 3.13
+    verified: false
 - name: CairoSVG
   version: 2.8.2
   license: LGPL-3.0-or-later
