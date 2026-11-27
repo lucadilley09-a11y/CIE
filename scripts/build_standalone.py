@@ -138,6 +138,38 @@ def collect_runtime_license_files(stage: Path, project_name: str) -> dict[str, A
     return result
 
 
+
+def collect_build_tool_license_files(stage: Path, distribution_name: str) -> dict[str, Any]:
+    """Preserve the PyInstaller bootloader license and exception with the binary."""
+    distribution = importlib_metadata.distribution(distribution_name)
+    name = str(distribution.metadata.get("Name") or distribution_name)
+    version = str(distribution.version)
+    root = stage / "THIRD_PARTY_LICENSES" / "BUILD_TOOLS" / f"{name}-{version}"
+    found: list[dict[str, Any]] = []
+    for item in distribution.files or []:
+        relative = PurePosixPath(str(item).replace("\\\\", "/"))
+        leaf = relative.name.lower()
+        if not (leaf.startswith(("license", "copying", "notice", "copyright"))
+                or any(part.lower() == "licenses" for part in relative.parts)):
+            continue
+        if relative.is_absolute() or ".." in relative.parts:
+            raise RuntimeError(f"Unsafe build-tool license path for {name}: {relative}")
+        source = Path(distribution.locate_file(item))
+        if not source.is_file():
+            continue
+        destination = root / Path(*relative.parts)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, destination)
+        found.append({
+            "path": destination.relative_to(stage).as_posix(),
+            "size_bytes": destination.stat().st_size,
+            "sha256": hashlib.sha256(destination.read_bytes()).hexdigest(),
+        })
+    if not found:
+        raise RuntimeError(f"No license/exception files found for embedded build tool {name}=={version}")
+    return {"name": name, "version": version, "license_files": sorted(found, key=lambda item: item["path"])}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=Path("release-packages"))
@@ -189,6 +221,7 @@ def main() -> int:
     # Preserve license/notice files for the installed runtime dependency closure,
     # including license and notice files for the remaining runtime dependency closure.
     collect_runtime_license_files(stage, "creative-intelligence-engine")
+    collect_build_tool_license_files(stage, "pyinstaller")
     (stage / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     build_info: dict[str, Any] = {
         "version": "2.3.2.dev0",
