@@ -204,7 +204,11 @@ def verify_platform_wheelhouses(
                     raise RuntimeError(
                         f"Embedded component {component.get('name')} from {name} is missing from deps/registry.yaml"
                     )
-                if str(registry_component.get("license") or "") != component_license:
+                approved_license_labels = {
+                    str(registry_component.get("license") or ""),
+                    *(str(value) for value in registry_component.get("license_variants", [])),
+                }
+                if component_license not in approved_license_labels:
                     raise RuntimeError(
                         f"Embedded component {component.get('name')} license differs from deps/registry.yaml: "
                         f"{component_license}"
