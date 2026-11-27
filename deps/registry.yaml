@@ -183,58 +183,6 @@ packages:
     target: 3.11, 3.12, 3.13
     verified: false
     note: Must pass the CI matrix and actual target wheel build.
-- name: soundfile
-  version: 0.13.1
-  license: BSD-3-Clause; bundles libsndfile (LGPL-2.1)
-  tier: 1
-  purpose: Audio file I/O
-  verification: LGPL-obligations-and-wheel-contents-review-required
-  release_approved: false
-  provenance:
-    intended_distribution: PyPI
-    verified: false
-    note: Distribution source, source repository, and artifact provenance have not
-      been independently verified for this release.
-  transitive_dependencies:
-    status: pending-installed-environment-audit
-    evidence_file: pipdeptree JSON and dependency-policy-report.json
-  wheel_availability:
-    status: pending-platform-build
-    targets:
-      windows_10_11_x64: unverified
-      ubuntu_22_04_x64: unverified
-      macos_14_arm64: unverified
-    hashes: generated-per-target-in-wheelhouse-manifest.json
-  python_compatibility:
-    target: 3.11, 3.12, 3.13
-    verified: false
-    note: Must pass the CI matrix and actual target wheel build.
-- name: pyloudnorm
-  version: 0.2.0
-  license: MIT
-  tier: 1
-  purpose: Audio loudness measurement
-  verification: metadata-and-source-not-independently-audited
-  release_approved: false
-  provenance:
-    intended_distribution: PyPI
-    verified: false
-    note: Distribution source, source repository, and artifact provenance have not
-      been independently verified for this release.
-  transitive_dependencies:
-    status: pending-installed-environment-audit
-    evidence_file: pipdeptree JSON and dependency-policy-report.json
-  wheel_availability:
-    status: pending-platform-build
-    targets:
-      windows_10_11_x64: unverified
-      ubuntu_22_04_x64: unverified
-      macos_14_arm64: unverified
-    hashes: generated-per-target-in-wheelhouse-manifest.json
-  python_compatibility:
-    target: 3.11, 3.12, 3.13
-    verified: false
-    note: Must pass the CI matrix and actual target wheel build.
 - name: trimesh
   version: 4.11.1
   license: MIT
