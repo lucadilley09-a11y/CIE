@@ -5,11 +5,11 @@
 **Phase 0 is not complete.** The latest hosted CI run provides useful cross-platform test and packaging evidence, but the dependency release gate and owner-machine Windows acceptance test are still open.
 
 Repository: `lucadilley09-a11y/CIE`  
-Commit tested: `cf4f86f915b1c3c3aaed4c10012315512f6f9249`
+Commit tested: `6388b632afa4fb27a05343f58ad701d5417916c5`
 
 ## Hosted CI
 
-Run: https://github.com/lucadilley09-a11y/CIE/actions/runs/45951757222
+Latest run: https://github.com/lucadilley09-a11y/CIE/actions/runs/45954378823 (supersedes earlier successful run 45951757222)
 
 - Test matrix: 9/9 jobs succeeded — Windows Server 2022, Ubuntu 22.04, and macOS 15; Python 3.11, 3.12, and 3.13.
 - Standalone packaging: 3/3 jobs succeeded — Windows, Ubuntu, and macOS.
@@ -18,15 +18,15 @@ Run: https://github.com/lucadilley09-a11y/CIE/actions/runs/45951757222
 
 | Platform artifact | Artifact ID | GitHub artifact ZIP SHA-256 |
 |---|---:|---|
-| Windows Server 2022 | 15177027541 | `dc81257aa5e8079bf4bb9aa1a7920240d18fb7f29b1eb8f0ca40bc5579abd60d` |
-| macOS 15 | 15177336819 | `3a78f22fe970ddc5ae34a43a65dd3be25e953c8a3055b63cc93774bd7593cb4f` |
-| Ubuntu 22.04 | 15177656027 | `ff5b7f14c3c809007f4024d122cab949e5fcdeafcd60db2d1d0962faa1ffa913` |
+| Windows Server 2022 | 15178048470 | `ed5b4a4030d2c26725ec3e9a947ea158b6d8016c483584065d0836f6bb2c4d9a` |
+| macOS 15 | 15178113283 | `9385cc82cdc17a2b3eed1dc6ee5681f56a5c66c27bdfebaaae6cc25b03f10358` |
+| Ubuntu 22.04 | 15177883167 | `b4e4a819bdb31970ce860f72674ed847a2a1d99a6a7f8dcc9e3cfd4dba049b16` |
 
 ## Dependency and security audit
 
-Run: https://github.com/lucadilley09-a11y/CIE/actions/runs/45951757607  
-Audit artifact: https://github.com/lucadilley09-a11y/CIE/actions/runs/45951757607/artifacts/15177590476  
-Artifact ZIP SHA-256: `a90c3fcb650719c6dda6fa53dd9fc6b028a8960cf8c084099de210dcaa535129`
+Latest run: https://github.com/lucadilley09-a11y/CIE/actions/runs/45954378756  
+Audit artifact: https://github.com/lucadilley09-a11y/CIE/actions/runs/45954378756/artifacts/15177957526  
+Artifact ZIP SHA-256: `d86f3bf09bcb6df1223ec9774eb5a4448882535566728f3a258dea327a4f3130`
 
 - `pip-audit --strict` completed with **no known vulnerabilities** in the audited installed environment.
 - The runtime dependency tree contained 35 distributions, including CIE.
