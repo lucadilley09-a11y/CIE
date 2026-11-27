@@ -43,6 +43,8 @@ The eight direct dependencies remain fail-closed in `deps/registry.yaml`. No rel
 
 The macOS PyInstaller log also reports SDK-version warnings for bundled SciPy binaries. The executable smoke test passed, but code-signing/hardened-runtime readiness is not established by that result.
 
+The latest Windows artifact was downloaded and inspected directly: the outer Actions ZIP contained the `.mcpb`; the `.mcpb` SHA-256 is `b67d6bce11e8c91d9e18d2e8c1d98fc43f617861960088e14d7adcc90c88ccfa`. Its archive contains the Windows executable, manifest, build info, SBOM, CIE license, a `THIRD_PARTY_LICENSES.json` manifest, and 63 third-party license-file entries covering 37 runtime distributions. The PyInstaller build-tool `COPYING.txt` is also present and explicitly includes the bootloader exception. This verifies notice-file presence in this Windows artifact, not a complete legal review or the user's local launch test.
+
 ## Remaining acceptance work
 
 1. Complete evidence-backed package provenance, wheel-hash, transitive-license, and conditional-license review; only then consider changing individual registry approvals.
