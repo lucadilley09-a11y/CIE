@@ -20,6 +20,10 @@ Later sessions follow these unless the owner changes them. Newest first.
 | Final install | Run CIE from the owner's folder, so updates only need a Claude restart |
 | Approvals | Autonomy stays `assist`; testing happens in Claude's sandbox |
 
+## Phase 4 (2026-11-27)
+
+See `PHASE4_PROGRESS.md`. Only Blender for now (Gradle and Roblox Studio later). Blender runs in the background only with factory settings and auto-run scripts disabled; Eevee is the default renderer. Workflows: owner approves once per run outside Claude (`cie approve`), retry then roll back on failure. Automation targets Hearth browser games first. All four ready-made workflows included, plus `new_browser_game`.
+
 ## Phase 3 (2026-11-27)
 
 See `PHASE3_PROGRESS.md`. Creative tools write only into CIE's studio folder, so they run as `read` without approval prompts; copying an asset into a project (`studio.place`) is a `write` that needs approval and snapshots first. Quality gate: metrics first, then a preview sheet Claude views through the new `cie_view` tool. No new dependencies (numpy, scipy, Pillow only); FFmpeg optional for OGG/MP3. Characters face +Z (glTF), metres, Y up.

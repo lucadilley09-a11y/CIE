@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.3.2.dev0: Phase 4 workflows and Blender (2026-11-27)
+
+See `PHASE4_PROGRESS.md`. Optional Blender integration run hidden in the background (booleans, real bevels, remesh, subdivision, procedural materials, Eevee/Cycles renders, normal/AO/colour baking, FBX export) with automatic detection; JSON workflows with references, conditions, foreach, quality-gated retries, owner approval once per run (`cie approve`), rollback on failure and run history; five built-in workflows including `new_browser_game` and `release_prep`; `game.check` and `game.package` for browser games. 189 capabilities.
+
 ## 2.3.2.dev0: Phase 3 creative studio (2026-11-27)
 
 See `PHASE3_PROGRESS.md`. Native 3D modelling (primitives, edit ops, UV unwrap, PBR materials, baked textures, validation, OBJ/STL/glTF/GLB I/O, software preview renderer) and 12 low-poly generators; R15-style rigged characters with IK locomotion and motion-quality metrics, custom keyframes, blends, auto-rigging and prop animation; OKLCH palettes, layered pixel drawing, 8-direction sprites from 3D, seamless textures and dual-grid tilesets, UI kit, 2D animation, vector art and image editing; 20 SFX, ambience loops, music with MIDI, 27 audio edit ops and BS.1770 loudness. Every tool returns a preview sheet; new `cie_view` MCP tool shows it to Claude. Outputs stay in CIE's studio folder until `studio.place` (approval-gated) copies them into a project. 173 capabilities.

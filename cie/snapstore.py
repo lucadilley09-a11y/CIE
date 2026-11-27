@@ -813,6 +813,7 @@ SKIP_AUTO_SNAPSHOT_IDS = {
     "templates.save",  # writes CIE's template library only
     "templates.apply",  # takes its own snapshot that also records the new files
     "code.fix_apply",  # snapshots exactly the files it edits
+    "studio.place",  # snapshots exactly the files it copies (incl. companions)
 }
 
 

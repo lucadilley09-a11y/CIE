@@ -245,22 +245,23 @@ def place(source: str, dest: str, overwrite: bool = False, include_sidecars: boo
         target = target / src.name  # a folder (existing, or new when it has no file extension)
     if target.exists() and not overwrite:
         raise ValueError(f"'{target}' already exists. Pass overwrite=true to replace it (a snapshot is taken first).")
-    target.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(src, target)
-    copied = [str(target)]
-    # Companion files that travel with the asset (MTL and textures for OBJ, atlas JSON for sheets).
-    for companion in _companions(src):
-        dst = target.parent / companion.name
-        if dst.exists() and not overwrite:
-            continue
-        shutil.copy2(companion, dst)
-        copied.append(str(dst))
+    pairs = [(src, target)] + [(c, target.parent / c.name) for c in _companions(src)]
     if include_sidecars:
         side = src.with_suffix(src.suffix + ".cie.json")
         if side.exists():
-            shutil.copy2(side, target.with_suffix(target.suffix + ".cie.json"))
-            copied.append(str(target.with_suffix(target.suffix + ".cie.json")))
-    return {"project": root.get("id"), "copied": copied}
+            pairs.append((side, target.with_suffix(target.suffix + ".cie.json")))
+    pairs = [(a, b) for a, b in pairs if a == src or overwrite or not b.exists()]
+    # Snapshot the exact files this copy creates or replaces, so an undo (or a workflow rollback)
+    # removes new files and restores replaced ones.
+    from .snapstore import create_snapshot
+    snap = create_snapshot(paths=[str(b) for _, b in pairs], kind="auto", description="Before studio.place")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    copied = []
+    for a, b in pairs:
+        b.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(a, b)
+        copied.append(str(b))
+    return {"project": root.get("id"), "copied": copied, "snapshot": snap["snapshot_id"]}
 
 
 def _companions(src: Path) -> list[Path]:
@@ -295,6 +296,15 @@ def review(path: str) -> dict[str, Any]:
     raise ValueError(f"No reviewer for '{ext}' files.")
 
 
+def _place_handler(a: dict[str, Any]) -> dict[str, Any]:
+    try:
+        data = place(a["source"], a["dest"], bool(a.get("overwrite", False)), bool(a.get("include_sidecars", False)))
+    except (ValueError, FileNotFoundError, PermissionError, KeyError) as exc:
+        return {"status": "error", "summary": str(exc)}
+    return {"status": "ok", "summary": f"Placed {len(data['copied'])} file(s) in the project.", "data": data,
+            "evidence": [{"auto_snapshot": data["snapshot"], "files": len(data["copied"])}]}
+
+
 def register_capabilities(reg: Any) -> None:
     from .registry import CapabilitySpec
 
@@ -325,6 +335,6 @@ def register_capabilities(reg: Any) -> None:
         summary="Copy a finished studio asset into a project folder (with its MTL/textures/atlas JSON). Snapshots first.",
         input_schema={"source": "str", "dest": "str", "overwrite": "optional bool", "include_sidecars": "optional bool"},
         permission="write",
-        handler=wrap(lambda a: place(a["source"], a["dest"], bool(a.get("overwrite", False)), bool(a.get("include_sidecars", False))), "Asset placed in the project."),
+        handler=_place_handler,
         tags=["studio", "export"],
     ))

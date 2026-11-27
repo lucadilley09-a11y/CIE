@@ -342,6 +342,11 @@ def register_all_capabilities(reg: CapabilityRegistry) -> None:
     rig.register_capabilities(reg)
     pixel.register_capabilities(reg)
     synth.register_capabilities(reg)
+    # Phase 4: Blender integration (optional), workflows, browser-game checks
+    from . import blender, flows, game
+    blender.register_capabilities(reg)
+    game.register_capabilities(reg)
+    flows.register_capabilities(reg)
 
     def _batch_handler(args: dict[str, Any]) -> dict[str, Any]:
         ops = args.get("operations") or []

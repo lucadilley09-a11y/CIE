@@ -85,6 +85,11 @@ Built in, with no Blender, AI models or paid services needed:
 
 Every tool checks its own output and returns a preview sheet. Claude looks at it with the `cie_view` tool before calling an asset done. Results go to CIE's studio folder; `studio.place` copies one into your game after you approve. See [`PHASE3_PROGRESS.md`](PHASE3_PROGRESS.md).
 
+## Phase 4 workflows and Blender
+
+- **Blender (optional):** if Blender 4.2+ is installed, CIE finds it and runs it hidden for booleans, bevels, subdivision, realistic materials, Eevee/Cycles renders, texture baking and FBX export (`blender.*`).
+- **Workflows:** `flow.run` runs multi-step jobs (`blender_polish`, `asset_pack`, `bug_hunt`, `release_prep`, `new_browser_game`, or your own). If a run will change your files, you approve it once in a terminal with `cie approve <run_id>`; if it fails, it's rolled back.
+
 ## Safety defaults
 
 CIE defaults to `assist` autonomy. Read operations can run without approval; writes, execution, and destructive operations are subject to the permission policy and explicit owner approval.

@@ -27,6 +27,44 @@ def check_optional_modules() -> dict[str, bool]:
     return out
 
 
+def _version_key(path: Path) -> tuple:
+    import re
+    m = re.search(r"(\d+)\.(\d+)(?:\.(\d+))?", str(path.parent.name) + " " + str(path))
+    return tuple(int(x or 0) for x in m.groups()) if m else (0, 0, 0)
+
+
+def blender_candidates() -> list[Path]:
+    """Usual Windows install places, newest first: the official installer, Steam, the portable zip
+    in Downloads/Desktop, and Blender Launcher builds."""
+    roots = []
+    for env in ("ProgramFiles", "ProgramFiles(x86)", "LOCALAPPDATA"):
+        val = os.environ.get(env)
+        if val:
+            roots.append(Path(val))
+    home = Path.home()
+    found: list[Path] = []
+    patterns = [
+        ("Blender Foundation", "Blender*/blender.exe"),
+        ("Steam/steamapps/common/Blender", "blender.exe"),
+        ("Programs/Blender Foundation", "Blender*/blender.exe"),
+    ]
+    for root in roots:
+        for sub, pat in patterns:
+            base = root / sub
+            if base.is_dir():
+                found += [p for p in base.glob(pat) if p.is_file()]
+    for extra in (home / "Downloads", home / "Desktop", home / "Blender Launcher"):
+        if extra.is_dir():
+            found += [p for p in extra.glob("blender-*/blender.exe") if p.is_file()]
+            found += [p for p in extra.glob("*/blender-*/blender.exe") if p.is_file()]
+    seen, unique = set(), []
+    for p in sorted(found, key=_version_key, reverse=True):
+        if str(p).lower() not in seen:
+            seen.add(str(p).lower())
+            unique.append(p)
+    return unique
+
+
 def detect_blender(cfg: dict[str, Any] | None = None) -> str | None:
     cfg = cfg or load_config()
     configured = str(cfg.get("blender_path") or "").strip()
@@ -35,14 +73,8 @@ def detect_blender(cfg: dict[str, Any] | None = None) -> str | None:
     found = shutil.which("blender")
     if found:
         return found
-    for cand in [
-        r"C:\Program Files\Blender Foundation\Blender 5.3\blender.exe",
-        r"C:\Program Files\Blender Foundation\Blender 4.3\blender.exe",
-        r"C:\Program Files\Blender Foundation\Blender 4.2\blender.exe",
-    ]:
-        if Path(cand).exists():
-            return cand
-    return None
+    cands = blender_candidates()
+    return str(cands[0]) if cands else None
 
 
 def hardware_monitor() -> dict[str, Any]:
