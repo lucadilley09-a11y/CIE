@@ -49,6 +49,8 @@ jobs:
           pattern: cie-wheelhouse-*
           path: wheelhouses
           merge-multiple: false
+      - name: Install registry parser
+        run: python -m pip install PyYAML==6.0.2
       - name: Verify hashes, exact pins, licenses, and native notices
         run: python scripts/verify_wheelhouse_evidence.py --wheelhouses wheelhouses --output dependency-audit/platform-wheelhouse-evidence.json
       - uses: actions/upload-artifact@v4
