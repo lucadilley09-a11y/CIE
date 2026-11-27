@@ -121,10 +121,18 @@ def collect_runtime_license_files(stage: Path, project_name: str) -> dict[str, A
             or ""
         ).strip()
         if not license_value or license_value.upper() in {"UNKNOWN", "UNKNOWN LICENSE"}:
+            metadata = distribution.metadata
+            raw_classifiers = (
+                metadata.get_all("Classifier", [])
+                if hasattr(metadata, "get_all")
+                else metadata.get("Classifier", [])
+            )
+            if isinstance(raw_classifiers, str):
+                raw_classifiers = [raw_classifiers]
             classifiers = [
                 value.rsplit(" :: ", 1)[-1]
-                for value in distribution.metadata.get_all("Classifier", [])
-                if value.startswith("License ::")
+                for value in raw_classifiers
+                if str(value).startswith("License ::")
             ]
             license_value = classifiers[0] if classifiers else "NOASSERTION"
         manifest_entries.append({
