@@ -22,6 +22,7 @@ dependencies = [
   "soundfile==0.13.1",
   "pyloudnorm==0.2.0",
   "trimesh==4.11.1",
+  "networkx==3.7",
 ]
 
 [project.scripts]
