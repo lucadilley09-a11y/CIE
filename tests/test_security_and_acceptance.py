@@ -115,7 +115,7 @@ class SecurityAndAcceptanceTests(unittest.TestCase):
         self.assertEqual(denied["status"], "approval_required")
         config.approve_tool("memory.save")
         allowed = mcp_server.cie_memory(action="save", title="Approved Note", body="x")
-        self.assertEqual(allowed["status"], "ok")
+        self.assertEqual(allowed["status"], "ok", msg=str(allowed))
 
     def test_destructive_memory_actions_require_owner_approval(self) -> None:
         config.save_config({**config.load_config(), "autonomy_level": "autonomous", "approved_tools": []})
