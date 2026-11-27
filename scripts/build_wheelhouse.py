@@ -11,6 +11,7 @@ import argparse
 import hashlib
 import json
 import platform
+import re
 import subprocess
 import sys
 import zipfile
@@ -51,6 +52,7 @@ def wheel_contents_inventory(wheel_path: Path) -> dict[str, Any]:
     """Record license metadata/files and native library payloads in a wheel."""
     license_files: list[dict[str, Any]] = []
     native_binaries: list[dict[str, Any]] = []
+    embedded_components: list[dict[str, str]] = []
     with zipfile.ZipFile(wheel_path) as archive:
         metadata_files = [name for name in archive.namelist() if name.endswith(".dist-info/METADATA")]
         if len(metadata_files) != 1:
@@ -74,11 +76,28 @@ def wheel_contents_inventory(wheel_path: Path) -> dict[str, Any]:
             suffix = Path(name).suffix.lower()
             if leaf in {"license", "copying", "notice", "copyright", "license.txt", "copying.txt", "notice.txt"} or leaf.startswith(("license.", "copying.", "notice.")):
                 payload = archive.read(info)
+                license_text = payload.decode("utf-8", errors="replace")
                 license_files.append({
                     "path": name,
                     "size_bytes": len(payload),
                     "sha256": hashlib.sha256(payload).hexdigest(),
                 })
+                component_pattern = re.compile(
+                    r"(?m)^Name:\\s*(?P<name>[^\\r\\n]+)\\s*\\r?\\n"
+                    r"Files:\\s*(?P<files>[^\\r\\n]+)\\s*\\r?\\n"
+                    r"(?:Description:\\s*(?P<description>[^\\r\\n]+)\\s*\\r?\\n)?"
+                    r"Availability:\\s*(?P<url>[^\\r\\n]+)\\s*\\r?\\n"
+                    r"License:\\s*(?P<license>[^\\r\\n]+)"
+                )
+                for match in component_pattern.finditer(license_text):
+                    embedded_components.append({
+                        "name": match.group("name").strip(),
+                        "declared_files": match.group("files").strip(),
+                        "description": (match.group("description") or "").strip(),
+                        "source_url": match.group("url").strip(),
+                        "license": match.group("license").strip(),
+                        "license_file": name,
+                    })
             if suffix in {".so", ".dll", ".dylib", ".pyd"}:
                 payload = archive.read(info)
                 native_binaries.append({
@@ -94,6 +113,9 @@ def wheel_contents_inventory(wheel_path: Path) -> dict[str, Any]:
         },
         "license_files": sorted(license_files, key=lambda item: item["path"]),
         "native_binaries": sorted(native_binaries, key=lambda item: item["path"]),
+        "embedded_components": sorted(
+            embedded_components, key=lambda item: (item["name"].lower(), item["license"])
+        ),
     }
 
 def read_exact_requirements(path: Path) -> dict[str, str]:
