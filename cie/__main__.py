@@ -31,6 +31,27 @@ def _config() -> int:
     return 0
 
 
+def _project(args: argparse.Namespace) -> int:
+    from . import projects
+
+    try:
+        if args.action == "add":
+            result = projects.register_project(args.path, args.id or "", args.exclude or [])
+        elif args.action == "list":
+            result = projects.list_projects()
+        elif args.action == "detect":
+            result = projects.detect_project(args.path)
+        elif args.action == "remove":
+            result = projects.remove_project(args.id)
+        else:
+            return 2
+    except ValueError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+    print(json.dumps(result, indent=2, default=str))
+    return 0
+
+
 def _serve(transport: str) -> int:
     if transport != "stdio":
         print("Only stdio transport is supported by this build.", file=sys.stderr)
@@ -49,6 +70,17 @@ def main(argv: Sequence[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("doctor", help="Check CIE health and local capabilities")
     sub.add_parser("config", help="Print current configuration")
+    proj = sub.add_parser("project", help="Register, list, detect, or remove projects")
+    psub = proj.add_subparsers(dest="action", required=True)
+    padd = psub.add_parser("add", help="Register a project folder")
+    padd.add_argument("path")
+    padd.add_argument("--id", default="")
+    padd.add_argument("--exclude", action="append", help="Folder name to skip (repeatable)")
+    psub.add_parser("list", help="List registered projects")
+    pdet = psub.add_parser("detect", help="Detect a folder's project type")
+    pdet.add_argument("path")
+    prem = psub.add_parser("remove", help="Unregister a project (files are not touched)")
+    prem.add_argument("id")
     serve = sub.add_parser("serve", help="Run the MCP server over stdio")
     serve.add_argument("--transport", choices=("stdio",), default="stdio")
     args = parser.parse_args(argv)
@@ -56,6 +88,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _doctor()
     if args.command == "config":
         return _config()
+    if args.command == "project":
+        return _project(args)
     if args.command == "serve":
         return _serve(args.transport)
     parser.error("Unknown command")

@@ -66,3 +66,48 @@ jobs:
           path: release-packages/*.mcpb
           if-no-files-found: error
           retention-days: 30
+
+  security:
+    name: Code and secret security scan
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history, so gitleaks also scans past commits
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install project and scanner (online)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e . bandit==1.7.10
+      - name: Bandit (fails on high-severity, medium-or-higher-confidence findings)
+        run: |
+          mkdir -p security-reports
+          python -m bandit -r cie mcp_server.py dashboard.py scripts -f json -o security-reports/bandit.json --exit-zero
+          python -m bandit -r cie mcp_server.py dashboard.py scripts -lll -ii
+      - name: Gitleaks secret scan (history included, matches redacted)
+        run: |
+          docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.18.4 \
+            detect --source /repo --config /repo/.gitleaks.toml --redact --no-banner \
+            --report-format json --report-path /repo/security-reports/gitleaks.json
+      - name: CIE's own Tier-1 security check on itself
+        env:
+          CIE_HOME: ${{ runner.temp }}/cie-home
+        run: |
+          python -m cie project add "$PWD" --id cie_self
+          python - <<'PY'
+          import json, sys
+          from cie.coding import security_checks
+          result = security_checks("cie_self")
+          print(json.dumps(result, indent=2))
+          high = [f for f in result["findings"] if f.get("severity") == "high"]
+          sys.exit(1 if high else 0)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cie-security-reports
+          path: security-reports/
+          if-no-files-found: warn
+          retention-days: 90

@@ -155,3 +155,26 @@ The wheelhouse builder and verifier remain optional tools. They are not deleted 
 - GitHub Actions cannot be triggered from this local execution environment. The updated workflows must be pushed to the repository and run from its Actions tab.
 
 **Phase 0 remains NOT COMPLETE.** The updated plan removes offline work as a blocker, but dependency auditing, standalone builds, and actual CI evidence are still required.
+
+## Phase 0 review against the complete master plan (2026-11-27)
+
+Checked every Phase 0 item in the owner's complete development plan (0.1–0.4) against the source and the test suite.
+
+| Item | Status | Evidence |
+|---|---|---|
+| 0.1 Inspect modules and capabilities | Done | 96 capabilities registered (91 before this update + 5 `project.*`) |
+| 0.1 Run test suite, fix genuine failures | Done | Fixed `check_dependency_policy.collect_dependency_tree`. Owner's Windows 11 / Python 3.12 install: **90 passed, 10 skipped, 0 failed** (13.7 s). Skips: 9 optional tools absent, 1 symlink test needing Windows Developer Mode |
+| 0.1 Dependency and license policy | Automated, not yet observed | `release.yml` runs pip-audit, pip-licenses, pipdeptree, and the license policy on every push |
+| 0.1 Code and secret security scan | Automated, not yet observed | New `security` job in `ci.yml`: Bandit (fails on high severity), Gitleaks over full history, CIE's own `security_checks` on itself (0 high findings locally) |
+| 0.1 Standalone packaging | Not verified | Needs PyInstaller builds on hosted runners |
+| 0.1 Windows/Linux/macOS | Not verified | CI workflow exists; no remote run observed |
+| 0.1 Docs match implementation | Done for this update | README, CHANGELOG, this file |
+| 0.2 Project registration | Done | `project.register/list/detect/update/remove`, CLI `cie project`, 10 regression tests |
+| 0.3 Unified index, consistent counts | Done | `eff.incremental_index` is the single writer; counts equality test |
+| 0.3 Incremental indexing, invalidation | Done | mtime + SHA-256 change detection, deleted-file cleanup, `index_meta` versioned re-index |
+| 0.3 Background updates | Not done | Indexing runs on demand (and before `brain`/`dependencies`/`search`); no file watcher |
+| 0.3 Asset metadata, project relationships in index | Not done | Planned with Phase 1.4 knowledge store |
+| 0.4 Regression tests per fix | Done | `tests/test_phase0_registration_and_index.py` |
+| 0.4 Error reporting, diagnostics, migration | Partial | Per-file index errors reported; index migration added; config migration pre-existed |
+
+Phase 0 remains **not complete**: the dependency/license audit, standalone builds, and hosted CI evidence still need to be produced on a machine with network access.

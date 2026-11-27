@@ -28,12 +28,16 @@ python -m unittest discover -s tests -v
 python -m cie --version
 python -m cie doctor
 python -m cie config
+python -m cie project detect "C:\path\to\game"
+python -m cie project add "C:\path\to\game" --id my_game
+python -m cie project list
+python -m cie project remove my_game
 python mcp_server.py --version
 python mcp_server.py --doctor
 python mcp_server.py --stdio
 ```
 
-The installed `cie` command maps to `cie.__main__:main`. The MCP stdio server is provided by `mcp_server.py`.
+Projects can also be registered from Claude with the `project.register` capability (approval-gated). The installed `cie` command maps to `cie.__main__:main`. The MCP stdio server is provided by `mcp_server.py`.
 
 ## Online-first install and platform testing
 

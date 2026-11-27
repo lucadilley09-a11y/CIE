@@ -33,7 +33,25 @@ LANG_MAP = {
     ".yml": "yaml",
     ".toml": "toml",
     ".gd": "gdscript",
+    ".lua": "lua",
+    ".luau": "luau",
+    ".html": "html",
+    ".htm": "html",
+    ".css": "css",
+    ".mjs": "javascript",
+    ".cjs": "javascript",
+    ".kt": "kotlin",
+    ".gradle": "gradle",
 }
+
+# Languages whose symbols and imports the unified indexer extracts.
+CODE_LANGS = {
+    "python", "javascript", "typescript", "csharp", "cpp", "c", "rust", "go",
+    "java", "gdscript", "lua", "luau", "kotlin",
+}
+
+# Bump when the indexer extracts new kinds of data; triggers one full re-index.
+INDEX_VERSION = 2
 
 TEXT_EXTS = set(LANG_MAP.keys()) | {".txt", ".ini", ".cfg", ".xml", ".html", ".css", ".sql", ".sh", ".bat", ".ps1"}
 
@@ -43,7 +61,11 @@ def detect_language(path: Path) -> str:
 
 
 def incremental_index(project_id: str = "") -> dict[str, Any]:
-    """Re-index only files whose hashes or mtimes changed; remove deleted files."""
+    """Unified indexer: the single writer of files, FTS text, symbols, and
+    dependencies. Re-indexes only changed files and removes deleted ones.
+    A project indexed by an older INDEX_VERSION gets one full re-index."""
+    from .coding import extract_dependencies, extract_symbols
+
     cfg = load_config()
     roots = project_roots(cfg)
     if project_id:
@@ -55,9 +77,17 @@ def incremental_index(project_id: str = "") -> dict[str, Any]:
     indexed = 0
     skipped = 0
     removed = 0
+    symbols_written = 0
+    deps_written = 0
+    migrated: list[str] = []
+    errors: list[str] = []
 
     for root in roots:
         pid = root["id"]
+        meta = storage.query("SELECT index_version FROM index_meta WHERE project_id = ?", (pid,))
+        force_full = not meta or int(meta[0]["index_version"]) != INDEX_VERSION
+        if force_full:
+            migrated.append(pid)
         existing_rows = storage.query(
             "SELECT path, sha256, mtime_ns FROM files_index WHERE project_id = ?", (pid,)
         )
@@ -66,25 +96,31 @@ def incremental_index(project_id: str = "") -> dict[str, Any]:
         files = iter_project_files(root)
 
         def _tx(conn: Any) -> None:
-            nonlocal indexed, skipped, removed
+            nonlocal indexed, skipped, removed, symbols_written, deps_written
             for fpath in files:
                 sp = str(fpath)
                 seen_paths.add(sp)
                 try:
                     st = fpath.stat()
-                except OSError:
+                except OSError as exc:
+                    errors.append(f"{sp}: {exc}")
                     continue
                 prev = existing.get(sp)
-                if prev and prev["mtime_ns"] == st.st_mtime_ns:
+                if not force_full and prev and prev["mtime_ns"] == st.st_mtime_ns:
                     skipped += 1
                     continue
-                if fpath.suffix.lower() not in TEXT_EXTS or st.st_size > 2_000_000:
+                is_text = fpath.suffix.lower() in TEXT_EXTS and st.st_size <= 2_000_000
+                if not is_text:
                     h = sha256_bytes(f"{st.st_size}:{st.st_mtime_ns}".encode())
                     content = ""
                 else:
-                    raw = fpath.read_bytes()
+                    try:
+                        raw = fpath.read_bytes()
+                    except OSError as exc:
+                        errors.append(f"{sp}: {exc}")
+                        continue
                     h = sha256_bytes(raw)
-                    if prev and prev["sha256"] == h:
+                    if not force_full and prev and prev["sha256"] == h:
                         conn.execute(
                             "UPDATE files_index SET mtime_ns = ?, indexed_at = ? WHERE path = ?",
                             (st.st_mtime_ns, utc_now(), sp),
@@ -99,6 +135,7 @@ def incremental_index(project_id: str = "") -> dict[str, Any]:
                     INSERT INTO files_index(path, project_id, sha256, mtime_ns, size_bytes, language, indexed_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(path) DO UPDATE SET
+                        project_id = excluded.project_id,
                         sha256 = excluded.sha256,
                         mtime_ns = excluded.mtime_ns,
                         size_bytes = excluded.size_bytes,
@@ -108,22 +145,62 @@ def incremental_index(project_id: str = "") -> dict[str, Any]:
                     (sp, pid, h, st.st_mtime_ns, st.st_size, lang, utc_now()),
                 )
                 conn.execute("DELETE FROM files_fts WHERE file_path = ?", (sp,))
+                conn.execute("DELETE FROM symbols_index WHERE file_path = ?", (sp,))
+                conn.execute("DELETE FROM dependencies_index WHERE source_file = ?", (sp,))
                 if content:
                     conn.execute(
                         "INSERT INTO files_fts(file_path, project_id, content) VALUES (?, ?, ?)",
                         (sp, pid, content),
                     )
+                    if lang in CODE_LANGS:
+                        try:
+                            for sym in extract_symbols(fpath, content):
+                                conn.execute(
+                                    "INSERT INTO symbols_index(file_path, project_id, name, kind, line_start, line_end) VALUES (?, ?, ?, ?, ?, ?)",
+                                    (sp, pid, sym["name"], sym["kind"], sym["line_start"], sym["line_end"]),
+                                )
+                                symbols_written += 1
+                            for dep in extract_dependencies(fpath, content):
+                                conn.execute(
+                                    "INSERT INTO dependencies_index(source_file, target, kind, confidence, project_id) VALUES (?, ?, ?, ?, ?)",
+                                    (sp, dep["target"], dep["kind"], dep["confidence"], pid),
+                                )
+                                deps_written += 1
+                        except Exception as exc:  # noqa: BLE001 - one bad file must not stop the index
+                            errors.append(f"{sp}: {type(exc).__name__}: {exc}")
                 indexed += 1
 
             for old_path in set(existing.keys()) - seen_paths:
                 conn.execute("DELETE FROM files_index WHERE path = ?", (old_path,))
                 conn.execute("DELETE FROM files_fts WHERE file_path = ?", (old_path,))
                 conn.execute("DELETE FROM symbols_index WHERE file_path = ?", (old_path,))
+                conn.execute("DELETE FROM dependencies_index WHERE source_file = ?", (old_path,))
                 removed += 1
+            # Rows left by an earlier, unscoped writer for this project.
+            conn.execute(
+                "DELETE FROM symbols_index WHERE project_id = ? AND file_path NOT IN (SELECT path FROM files_index)", (pid,)
+            )
+            conn.execute(
+                "INSERT INTO index_meta(project_id, index_version, updated_at) VALUES (?, ?, ?) "
+                "ON CONFLICT(project_id) DO UPDATE SET index_version = excluded.index_version, updated_at = excluded.updated_at",
+                (pid, INDEX_VERSION, utc_now()),
+            )
 
         storage.run_write(_tx)
 
-    return {"indexed": indexed, "skipped_unchanged": skipped, "removed": removed}
+    result: dict[str, Any] = {
+        "indexed": indexed,
+        "skipped_unchanged": skipped,
+        "removed": removed,
+        "symbols_written": symbols_written,
+        "dependencies_written": deps_written,
+    }
+    if migrated:
+        result["full_reindex"] = migrated
+    if errors:
+        result["errors"] = errors[:20]
+        result["error_count"] = len(errors)
+    return result
 
 
 def search_files(query: str, project_id: str = "", limit: int = 20) -> dict[str, Any]:

@@ -1,0 +1,14 @@
+# Gitleaks config for CIE: default rules plus an allowlist for intentional
+# fake secrets used to test CIE's own redaction code.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Fake secrets in redaction tests and redaction regex patterns"
+paths = [
+  '''tests/test_security_and_acceptance\.py''',
+]
+regexes = [
+  '''sk-1234567890abcdefghij''',
+  '''plain-secret-value''',
+]

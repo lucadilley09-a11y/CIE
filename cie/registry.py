@@ -294,6 +294,8 @@ def register_all_capabilities(reg: CapabilityRegistry) -> None:
     vault.register_capabilities(reg)
     external.register_capabilities(reg)
     creative.register_capabilities(reg)
+    from . import projects
+    projects.register_capabilities(reg)
 
     def _batch_handler(args: dict[str, Any]) -> dict[str, Any]:
         ops = args.get("operations") or []

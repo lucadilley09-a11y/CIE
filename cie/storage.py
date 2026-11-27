@@ -124,6 +124,16 @@ CREATE TABLE IF NOT EXISTS benchmarks (
     cache_hit INTEGER NOT NULL DEFAULT 0,
     recorded_at TEXT NOT NULL
 );
+
+CREATE INDEX IF NOT EXISTS idx_deps_project ON dependencies_index(project_id);
+
+-- Per-project index schema version. When CIE's indexer changes what it
+-- extracts, bumping INDEX_VERSION forces one full re-index (safe migration).
+CREATE TABLE IF NOT EXISTS index_meta (
+    project_id TEXT PRIMARY KEY,
+    index_version INTEGER NOT NULL,
+    updated_at TEXT NOT NULL
+);
 """
 
 
@@ -264,12 +274,23 @@ class StorageManager:
         symbols = self.query("SELECT COUNT(*) AS c FROM symbols_index")[0]["c"]
         deps = self.query("SELECT COUNT(*) AS c FROM dependencies_index")[0]["c"]
         notes = self.query("SELECT COUNT(*) AS c FROM notes_index")[0]["c"]
+        per_project = self.query(
+            """
+            SELECT f.project_id AS project_id,
+                   COUNT(*) AS files,
+                   (SELECT COUNT(*) FROM symbols_index s WHERE s.project_id = f.project_id) AS symbols,
+                   (SELECT COUNT(*) FROM dependencies_index d WHERE d.project_id = f.project_id) AS dependencies,
+                   (SELECT MAX(indexed_at) FROM files_index g WHERE g.project_id = f.project_id) AS last_indexed_at
+            FROM files_index f GROUP BY f.project_id ORDER BY f.project_id
+            """
+        )
         return {
             "db_path": str(self.db_path),
             "files_indexed": files,
             "symbols_indexed": symbols,
             "dependencies_indexed": deps,
             "notes_indexed": notes,
+            "projects": per_project,
         }
 
 

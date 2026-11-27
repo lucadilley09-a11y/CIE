@@ -17,6 +17,13 @@ GENERIC_DEF_RE = re.compile(
     r"^\s*(?:export\s+)?(?:async\s+)?(?:function|class|interface|type|struct|enum|fn|def|func)\s+([A-Za-z_][A-Za-z0-9_]*)"
 )
 IMPORT_RE = re.compile(r"^\s*(?:import|from|#include|using|use)\s+([^\s;'\"]+)")
+LUA_DEF_RE = re.compile(r"^\s*(?:local\s+)?function\s+([A-Za-z_][A-Za-z0-9_.:]*)\s*\(")
+LUA_ASSIGN_FN_RE = re.compile(r"^\s*(?:local\s+)?([A-Za-z_][A-Za-z0-9_.:]*)\s*=\s*function\s*\(")
+LUA_REQUIRE_RE = re.compile(r"\brequire\s*\(\s*([^)]+?)\s*\)")
+JS_FROM_RE = re.compile(r"""^\s*(?:import|export)\b[^'"]*?\bfrom\s*['"]([^'"]+)['"]""")
+JS_BARE_IMPORT_RE = re.compile(r"""^\s*import\s*['"]([^'"]+)['"]""")
+JS_REQUIRE_RE = re.compile(r"""\brequire\s*\(\s*['"]([^'"]+)['"]\s*\)""")
+INCLUDE_RE = re.compile(r"""^\s*#include\s*[<"]([^>"]+)[>"]""")
 TRACE_LINE_RE = re.compile(r'File\s+"([^"]+)",\s+line\s+(\d+)')
 GENERIC_TRACE_RE = re.compile(r"([A-Za-z0-9_./\\-]+\.[A-Za-z0-9]+):(\d+)")
 
@@ -51,6 +58,19 @@ def extract_symbols(path: Path, text: str | None = None) -> list[dict[str, Any]]
         except SyntaxError:
             pass
 
+    if lang in {"lua", "luau"}:
+        for idx, line in enumerate(content.splitlines(), start=1):
+            m = LUA_DEF_RE.match(line) or LUA_ASSIGN_FN_RE.match(line)
+            if m:
+                symbols.append({
+                    "name": m.group(1),
+                    "kind": "function",
+                    "line_start": idx,
+                    "line_end": idx,
+                    "parser": "lua_regex",
+                })
+        return symbols
+
     for idx, line in enumerate(content.splitlines(), start=1):
         m = GENERIC_DEF_RE.match(line)
         if m:
@@ -64,44 +84,75 @@ def extract_symbols(path: Path, text: str | None = None) -> list[dict[str, Any]]
     return symbols
 
 
+def extract_dependencies(path: Path, text: str | None = None) -> list[dict[str, str]]:
+    """Return import/require edges for one file. Python uses the AST (exact);
+    other languages use line patterns (inferred)."""
+    content = text if text is not None else path.read_text(encoding="utf-8", errors="replace")
+    lang = detect_language(path)
+    edges: list[dict[str, str]] = []
+    if lang == "python":
+        try:
+            tree = ast.parse(content)
+        except SyntaxError:
+            return edges
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    edges.append({"target": alias.name, "kind": "import", "confidence": "exact"})
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                edges.append({"target": node.module, "kind": "from_import", "confidence": "exact"})
+        return edges
+    for line in content.splitlines():
+        if lang in {"lua", "luau"}:
+            for m in LUA_REQUIRE_RE.finditer(line):
+                edges.append({"target": m.group(1).strip("'\" "), "kind": "require", "confidence": "inferred"})
+            continue
+        if lang in {"javascript", "typescript"}:
+            m = JS_FROM_RE.match(line) or JS_BARE_IMPORT_RE.match(line)
+            if m:
+                edges.append({"target": m.group(1), "kind": "import", "confidence": "inferred"})
+            for r in JS_REQUIRE_RE.finditer(line):
+                edges.append({"target": r.group(1), "kind": "require", "confidence": "inferred"})
+            continue
+        if lang in {"c", "cpp"}:
+            m = INCLUDE_RE.match(line)
+            if m:
+                edges.append({"target": m.group(1), "kind": "include", "confidence": "inferred"})
+            continue
+        if lang in {"csharp", "rust", "go", "java", "kotlin"}:
+            m = IMPORT_RE.match(line)
+            if m:
+                edges.append({"target": m.group(1), "kind": "import", "confidence": "inferred"})
+    return edges
+
+
 def codebase_brain(project_id: str = "") -> dict[str, Any]:
+    """Project map read from the unified index (refreshed incrementally first),
+    so its counts always match cie_status and coding.dependencies."""
+    from .efficiency import incremental_index
+
     roots = project_roots()
     if project_id:
         roots = [r for r in roots if r["id"] == project_id]
     storage = get_storage()
     summary_projects: list[dict[str, Any]] = []
-
     for r in roots:
         pid = r["id"]
-        files = iter_project_files(r)
-        lang_counts: dict[str, int] = {}
-        total_symbols = 0
-
-        def _tx(conn: Any) -> None:
-            nonlocal total_symbols
-            conn.execute("DELETE FROM symbols_index WHERE project_id = ?", (pid,))
-            for f in files:
-                lang = detect_language(f)
-                lang_counts[lang] = lang_counts.get(lang, 0) + 1
-                if lang in {"python", "javascript", "typescript", "csharp", "cpp", "c", "rust", "go", "java", "gdscript"}:
-                    try:
-                        txt = f.read_text(encoding="utf-8", errors="replace")
-                        syms = extract_symbols(f, txt)
-                        for s in syms:
-                            conn.execute(
-                                "INSERT INTO symbols_index(file_path, project_id, name, kind, line_start, line_end) VALUES (?, ?, ?, ?, ?, ?)",
-                                (str(f), pid, s["name"], s["kind"], s["line_start"], s["line_end"]),
-                            )
-                            total_symbols += 1
-                    except Exception:
-                        pass
-
-        storage.run_write(_tx)
+        refresh = incremental_index(pid)
+        langs = storage.query(
+            "SELECT language, COUNT(*) AS c FROM files_index WHERE project_id = ? GROUP BY language ORDER BY c DESC",
+            (pid,),
+        )
+        files = sum(row["c"] for row in langs)
+        symbols = storage.query("SELECT COUNT(*) AS c FROM symbols_index WHERE project_id = ?", (pid,))[0]["c"]
+        deps = storage.query("SELECT COUNT(*) AS c FROM dependencies_index WHERE project_id = ?", (pid,))[0]["c"]
         summary_projects.append({
             "project_id": pid,
-            "file_count": len(files),
-            "languages": lang_counts,
-            "symbols_indexed": total_symbols,
+            "file_count": files,
+            "languages": {row["language"]: row["c"] for row in langs},
+            "symbols_indexed": symbols,
+            "dependencies_indexed": deps,
+            "refresh": refresh,
         })
     return {"projects": summary_projects}
 
@@ -138,31 +189,43 @@ def read_symbol(path: str, symbol_name: str) -> dict[str, Any]:
     return {"path": str(resolved), "symbol": None, "source": "", "warning": f"Symbol '{symbol_name}' not found."}
 
 
-def dependency_mapper(project_id: str = "") -> dict[str, Any]:
+def dependency_mapper(project_id: str = "", max_edges: int = 100) -> dict[str, Any]:
+    """Dependency map read from the unified index. Returns a compact summary
+    (top targets, confidence counts) plus at most ``max_edges`` raw edges."""
+    from .efficiency import incremental_index
+
     roots = project_roots()
     if project_id:
         roots = [r for r in roots if r["id"] == project_id]
-    edges: list[dict[str, str]] = []
-    for r in roots:
-        for f in iter_project_files(r):
-            lang = detect_language(f)
-            if lang == "python":
-                try:
-                    tree = ast.parse(f.read_text(encoding="utf-8", errors="replace"))
-                    for node in ast.walk(tree):
-                        if isinstance(node, ast.Import):
-                            for alias in node.names:
-                                edges.append({"source": str(f), "target": alias.name, "kind": "import", "confidence": "exact"})
-                        elif isinstance(node, ast.ImportFrom) and node.module:
-                            edges.append({"source": str(f), "target": node.module, "kind": "from_import", "confidence": "exact"})
-                except SyntaxError:
-                    pass
-            elif lang in {"javascript", "typescript", "csharp", "cpp", "c", "rust", "go", "java"}:
-                for ln in f.read_text(encoding="utf-8", errors="replace").splitlines()[:100]:
-                    m = IMPORT_RE.match(ln)
-                    if m:
-                        edges.append({"source": str(f), "target": m.group(1), "kind": "import", "confidence": "inferred"})
-    return {"edge_count": len(edges), "edges": edges[:300]}
+    pids = [r["id"] for r in roots]
+    for pid in pids:
+        incremental_index(pid)
+    if not pids:
+        return {"edge_count": 0, "edges": [], "truncated": False, "omitted": 0, "top_targets": [], "by_confidence": {}}
+    storage = get_storage()
+    marks = ",".join("?" for _ in pids)
+    params = tuple(pids)
+    total = storage.query(f"SELECT COUNT(*) AS c FROM dependencies_index WHERE project_id IN ({marks})", params)[0]["c"]
+    by_conf = storage.query(
+        f"SELECT confidence, COUNT(*) AS c FROM dependencies_index WHERE project_id IN ({marks}) GROUP BY confidence", params
+    )
+    top = storage.query(
+        f"SELECT target, COUNT(*) AS c FROM dependencies_index WHERE project_id IN ({marks}) GROUP BY target ORDER BY c DESC, target LIMIT 25",
+        params,
+    )
+    limit = max(0, min(int(max_edges), 2000))
+    rows = storage.query(
+        f"SELECT source_file AS source, target, kind, confidence, project_id FROM dependencies_index WHERE project_id IN ({marks}) ORDER BY source_file, id LIMIT ?",
+        params + (limit,),
+    )
+    return {
+        "edge_count": total,
+        "by_confidence": {r["confidence"]: r["c"] for r in by_conf},
+        "top_targets": [{"target": r["target"], "count": r["c"]} for r in top],
+        "edges": rows,
+        "truncated": total > len(rows),
+        "omitted": max(0, total - len(rows)),
+    }
 
 
 def stack_trace_mapper(traceback_text: str) -> dict[str, Any]:
@@ -323,9 +386,9 @@ def register_capabilities(reg: Any) -> None:
         id="coding.dependencies",
         area="coding",
         summary="Map imports and dependencies with exact/inferred confidence labels.",
-        input_schema={"project_id": "optional str"},
+        input_schema={"project_id": "optional str", "max_edges": "optional int 0-2000"},
         permission="read",
-        handler=lambda args: {"status": "ok", "summary": "Dependency map built.", "data": dependency_mapper(args.get("project_id", ""))},
+        handler=lambda args: {"status": "ok", "summary": "Dependency map built.", "data": dependency_mapper(args.get("project_id", ""), int(args.get("max_edges", 100)))},
         tags=["coding", "dependencies"],
     ))
     reg.register(CapabilitySpec(

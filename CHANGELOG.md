@@ -1,5 +1,30 @@
 # Changelog
 
+## 2.3.2.dev0 — Phase 0.2/0.3 update (2026-11-27)
+
+### Project registration (Phase 0.2)
+- New `cie/projects.py` with five capabilities: `project.list`, `project.detect` (read) and `project.register`, `project.update`, `project.remove` (write, approval-gated under `assist`). No JSON editing or Python commands needed.
+- Auto-detects Godot, Unity, Unreal, Roblox (Rojo/Rokit/Wally/place files), Minecraft Fabric/Forge/NeoForge mods and packs, Python, Node, Rust, Go, Gradle, .NET, Blender, and plain web projects, and adds that type's build/cache folders to excludes.
+- Validates paths: absolute, existing, non-network, not a drive root, no reused id, no overlap with another registered project.
+- `project.remove` edits config and drops CIE's own regenerable index rows only; project files are never touched.
+- New CLI: `cie project add|list|detect|remove`.
+
+### Unified index (Phase 0.3)
+- `eff.incremental_index` is now the single writer for files, FTS text, symbols, and dependencies. Previously symbols were written only by `coding.brain` and dependencies were never stored, so `cie_status`, `coding.brain`, and `coding.dependencies` disagreed.
+- `coding.brain` and `coding.dependencies` refresh the index incrementally, then read from it, so all three report the same counts. `cie_status` index stats now include per-project counts and last-indexed time.
+- `coding.dependencies` output is bounded: summary (`by_confidence`, `top_targets`) plus at most `max_edges` raw edges (default 100), with `truncated`/`omitted` flags. It previously returned up to 300 edges (~78 KB) with a silently wrong total.
+- Added Lua/Luau symbol and `require` extraction; JavaScript/TypeScript imports now record the module path instead of the imported name; C/C++ `#include` extraction.
+- Safe migration: an `index_meta` table records the index version per project; a version change triggers exactly one full re-index.
+- Deleted files now also lose their dependency rows; per-file indexing errors are reported instead of silently skipped.
+
+### CI security scanning
+- New `security` job in `ci.yml`: Bandit (fails on high-severity findings), Gitleaks over full git history with redacted output, and CIE's own Tier-1 `security_checks` run against CIE itself. Reports upload as the `cie-security-reports` artifact.
+- `.gitleaks.toml` allowlists only the intentional fake secrets in the redaction tests.
+
+### Fixes
+- `scripts/check_dependency_policy.py` accepts both pipdeptree JSON shapes (flat `--json-tree` and `package`-wrapped), fixing the failing `test_dependency_tree_closure_is_recursive_and_normalized`.
+- Added `tests/test_phase0_registration_and_index.py` (10 regression tests).
+
 ## 2.3.2.dev0 — Phase 0 candidate (2026-11-26)
 
 ### Packaging and verification groundwork
