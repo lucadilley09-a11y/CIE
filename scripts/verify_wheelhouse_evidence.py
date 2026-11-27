@@ -7,6 +7,9 @@ import json
 import re
 import sys
 import tomllib
+import urllib.error
+import urllib.parse
+import urllib.request
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +29,38 @@ def sha256(path: Path) -> str:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def pypi_release_evidence(name: str, version: str) -> dict[str, Any]:
+    """Compare wheel bytes to PyPI's published SHA-256 and capture source metadata."""
+    quoted = urllib.parse.quote(name, safe="")
+    quoted_version = urllib.parse.quote(version, safe="")
+    url = f"https://pypi.org/pypi/{quoted}/{quoted_version}/json"
+    request = urllib.request.Request(url, headers={"User-Agent": "CIE-Phase0-Evidence/1.0"})
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except (OSError, urllib.error.URLError, json.JSONDecodeError) as exc:
+        raise RuntimeError(f"Unable to verify {name}=={version} against PyPI JSON: {exc}") from exc
+    info = payload.get("info") or {}
+    files = payload.get("urls") or []
+    wheel_hashes = {
+        item.get("filename"): (item.get("digests") or {}).get("sha256")
+        for item in files if item.get("filename", "").endswith(".whl")
+    }
+    sdists = [
+        {"filename": item.get("filename"), "sha256": (item.get("digests") or {}).get("sha256")}
+        for item in files if item.get("packagetype") == "sdist"
+    ]
+    return {
+        "pypi_url": url,
+        "pypi_wheel_hashes": wheel_hashes,
+        "sdists": sdists,
+        "home_page": info.get("home_page"),
+        "project_urls": info.get("project_urls") or {},
+        "license_expression": info.get("license_expression"),
+        "license": info.get("license"),
+    }
 
 
 def verify_platform_wheelhouses(
@@ -90,6 +125,14 @@ def verify_platform_wheelhouses(
             if actual_hash != expected_hash:
                 raise RuntimeError(f"SHA-256 mismatch for {wheel_path}")
             key = canonical_name(str(name))
+            pypi = None
+            if key != canonical_name(project["name"]):
+                pypi = pypi_release_evidence(str(name), version)
+                published_hash = pypi["pypi_wheel_hashes"].get(filename)
+                if published_hash is None:
+                    raise RuntimeError(f"{filename} is not listed in PyPI release metadata")
+                if published_hash != actual_hash:
+                    raise RuntimeError(f"Wheel hash does not match PyPI for {filename}")
             if key in packages and packages[key] != version:
                 raise RuntimeError(f"Multiple versions of {name} in {system} wheelhouse")
             packages[key] = version
@@ -108,11 +151,13 @@ def verify_platform_wheelhouses(
                 "name": str(name), "version": version, "filename": filename,
                 "sha256": actual_hash, "license_metadata": license_meta,
                 "license_files": license_files, "native_binaries": native,
+                "pypi": pypi,
             })
-            all_wheels[(key, version)] = {
+            all_wheels[(system, key, version)] = {
                 "name": str(name), "version": version, "filename": filename,
                 "sha256": actual_hash, "license_metadata": license_meta,
                 "license_files": license_files, "native_binaries": native,
+                "pypi": pypi,
             }
 
         for name, version in direct.items():
@@ -135,14 +180,31 @@ def verify_platform_wheelhouses(
 
     # Conditional-license component must carry its own license text in every target wheel.
     certifi = [w for w in all_wheels.values() if canonical_name(w["name"]) == "certifi"]
-    if not certifi:
-        raise RuntimeError("certifi is absent from the platform wheelhouse closure")
+    if len(certifi) != 3:
+        raise RuntimeError("certifi must be present in all three platform wheelhouses")
     for wheel in certifi:
         license_paths = [str(item.get("path", "")).lower() for item in wheel["license_files"]]
         if not any(path.endswith("license") or path.endswith("license.txt") or "/license." in path
                    for path in license_paths):
             raise RuntimeError("certifi wheel is missing its MPL license text")
 
+    sbom_components: list[dict[str, Any]] = []
+    for wheel in sorted(all_wheels.values(), key=lambda item: (item["name"].lower(), item["version"], item["filename"])):
+        metadata = wheel["license_metadata"]
+        license_value = metadata.get("license_expression") or metadata.get("license") or "NOASSERTION"
+        sbom_components.append({
+            "type": "library",
+            "name": wheel["name"],
+            "version": wheel["version"],
+            "purl": f"pkg:pypi/{canonical_name(wheel['name'])}@{wheel['version']}",
+            "hashes": [{"alg": "SHA-256", "content": wheel["sha256"]}],
+            "licenses": [{"license": {"name": license_value}}],
+            "properties": [
+                {"name": "cie:platform-wheel", "value": wheel["filename"]},
+                {"name": "cie:license-file-count", "value": str(len(wheel["license_files"]))},
+                {"name": "cie:native-binary-count", "value": str(len(wheel["native_binaries"]))},
+            ],
+        })
     return {
         "schema_version": 1,
         "project": {"name": project["name"], "version": project["version"]},
@@ -150,6 +212,16 @@ def verify_platform_wheelhouses(
         "platform_count": len(platform_reports),
         "platforms": platform_reports,
         "conditional_license_components": certifi,
+        "sbom": {
+            "bomFormat": "CycloneDX",
+            "specVersion": "1.5",
+            "version": 1,
+            "metadata": {"component": {
+                "type": "application", "name": project["name"], "version": project["version"],
+                "licenses": [{"license": {"id": "MIT"}}],
+            }},
+            "components": sbom_components,
+        },
     }
 
 
@@ -162,6 +234,9 @@ def main() -> int:
     evidence = verify_platform_wheelhouses(args.wheelhouses.resolve(), args.project_root.resolve())
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(evidence, indent=2) + "\n", encoding="utf-8")
+    sbom_path = args.output.with_name("sbom-platform-wheelhouses.json")
+    sbom_path.write_text(json.dumps(evidence["sbom"], indent=2) + "\n", encoding="utf-8")
+    print(f"Generated platform-complete CycloneDX SBOM: {sbom_path}")
     print(
         f"Verified {evidence['platform_count']} platform wheelhouses and "
         f"{sum(p['wheel_count'] for p in evidence['platforms'])} wheel artifacts."
