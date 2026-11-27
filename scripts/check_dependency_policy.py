@@ -107,6 +107,7 @@ def direct_dependency_registry_issues(
 def conditional_transitive_dependency_issues(
     registry: dict[str, Any],
     dependency_licenses: dict[str, str],
+    dependency_versions: dict[str, str],
     direct_pins: dict[str, str],
     require_release_approval: bool,
 ) -> list[str]:
@@ -130,11 +131,20 @@ def conditional_transitive_dependency_issues(
                 f"Conditional-license transitive dependency {name} ({license_name}) "
                 "is missing from deps/registry.yaml"
             )
-        elif entry.get("release_approved") is not True:
-            issues.append(
-                f"Conditional-license transitive dependency {name} ({license_name}) "
-                "has not been explicitly approved for release"
-            )
+        else:
+            approved_version = str(entry.get("version") or "")
+            observed_version = dependency_versions.get(name, "")
+            if approved_version != observed_version:
+                issues.append(
+                    f"Conditional-license transitive dependency {name}: "
+                    f"registry version {approved_version or '<unset>'} does not match "
+                    f"audited version {observed_version or '<unknown>'}"
+                )
+            if entry.get("release_approved") is not True:
+                issues.append(
+                    f"Conditional-license transitive dependency {name} ({license_name}) "
+                    "has not been explicitly approved for release"
+                )
     return issues
 
 
@@ -234,7 +244,7 @@ def main() -> int:
         audited_rows.append({"name": name, "version": version, "license": license_name})
 
     issues.extend(conditional_transitive_dependency_issues(
-        registry, licenses, direct, ns.require_release_approval
+        registry, licenses, dependencies, direct, ns.require_release_approval
     ))
 
     report = {
