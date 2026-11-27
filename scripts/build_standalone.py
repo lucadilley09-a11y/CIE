@@ -120,7 +120,11 @@ def collect_runtime_license_files(stage: Path, project_name: str) -> dict[str, A
             or distribution.metadata.get("License")
             or ""
         ).strip()
-        if not license_value or license_value.upper() in {"UNKNOWN", "UNKNOWN LICENSE"}:
+        if (
+            not license_value
+            or license_value.upper() in {"UNKNOWN", "UNKNOWN LICENSE"}
+            or len(license_value) > 500
+        ):
             metadata = distribution.metadata
             raw_classifiers = (
                 metadata.get_all("Classifier", [])
