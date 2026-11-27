@@ -1,0 +1,2 @@
+# Runtime installation from the project root. Exact direct pins live in pyproject.toml.
+-e .

@@ -1,0 +1,5 @@
+# Exact PEP 517 backend requirements from pyproject.toml.
+# Install these into the build interpreter before invoking build_wheelhouse.py.
+# For disconnected builds, obtain these wheels in advance and install with --no-index.
+setuptools==84.2.1
+wheel==0.48.0

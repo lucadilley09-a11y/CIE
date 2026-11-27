@@ -1,0 +1,163 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "name": "creative-intelligence-engine",
+      "version": "2.3.2.dev0",
+      "type": "application",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "cie:sbom-status",
+          "value": "provisional; direct pins only; transitive wheel and native-library audit pending"
+        },
+        {
+          "name": "cie:phase",
+          "value": "0"
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "mcp",
+      "version": "1.28.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "PyYAML",
+      "version": "6.0.2",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "Pillow",
+      "version": "11.1.0",
+      "licenses": [
+        {
+          "license": {
+            "name": "MIT-CMU"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "numpy",
+      "version": "2.2.3",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "scipy",
+      "version": "1.15.2",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "tree-sitter",
+      "version": "0.24.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "soundfile",
+      "version": "0.13.1",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "cie:native-dependency",
+          "value": "libsndfile LGPL obligations and wheel bundling still require review"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "pyloudnorm",
+      "version": "0.2.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "trimesh",
+      "version": "4.11.1",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "libsndfile",
+      "version": "unverified-wheel-contents",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-only"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "cie:verification",
+          "value": "pending native wheel inspection and redistribution compliance review"
+        }
+      ]
+    }
+  ]
+}

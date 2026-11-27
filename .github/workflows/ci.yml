@@ -1,0 +1,68 @@
+name: CIE CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cie-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Tests (${{ matrix.os }}, Python ${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-2022, macos-14]
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install project and test runner (online)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e . pytest==9.2.0
+      - name: Compile and test
+        run: |
+          python -m compileall -q cie mcp_server.py dashboard.py scripts tests
+          python -m pytest -q
+      - name: CLI and dependency smoke tests
+        run: |
+          python -m pip check
+          python -m cie --version
+          python -m cie config
+          python -m cie doctor
+          python mcp_server.py --version
+
+  standalone:
+    name: Standalone bundle (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-2022, macos-14]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install project and native packager (online)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e . -r build-requirements.txt
+      - name: Build and smoke-test standalone MCP bundle
+        run: python scripts/build_standalone.py --output release-packages
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cie-standalone-${{ matrix.os }}
+          path: release-packages/*.mcpb
+          if-no-files-found: error
+          retention-days: 30

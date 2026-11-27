@@ -1,0 +1,67 @@
+name: CIE release checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-audit:
+    name: Dependency, vulnerability, and license audit
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install runtime and audit tools (online)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install .
+          python -m pip install pip-audit==2.10.1 pip-licenses==5.5.5 pipdeptree==4.2.16
+      - name: Collect vulnerability, license, and dependency evidence
+        run: |
+          mkdir -p dependency-audit
+          python -m pip_audit --strict --skip-editable --format=json > dependency-audit/pip-audit.json
+          pip-licenses --format=json > dependency-audit/all-installed-licenses.json
+          pipdeptree --json-tree > dependency-audit/all-installed-dependency-tree.json
+          pipdeptree --warn fail --json-tree > dependency-audit/dependency-tree.json
+      - name: Enforce CIE direct and transitive license policy
+        run: python scripts/check_dependency_policy.py --require-release-approval --output dependency-audit
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cie-dependency-audit
+          path: dependency-audit/
+          if-no-files-found: warn
+          retention-days: 90
+
+  standalone-bundles:
+    name: Standalone release bundle (${{ matrix.os }})
+    needs: dependency-audit
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-2022, macos-14]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install project and packager (online)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e . -r build-requirements.txt
+      - name: Build and smoke-test standalone bundle
+        run: python scripts/build_standalone.py --output release-packages
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cie-release-${{ matrix.os }}
+          path: release-packages/*.mcpb
+          if-no-files-found: error
+          retention-days: 90

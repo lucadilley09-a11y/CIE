@@ -1,0 +1,7 @@
+# Build/test tooling only; none of these packages is a CIE Tier-1 runtime dependency.
+-r build-system-requirements.txt
+# PyInstaller uses GPL-2.0-or-later with a special bootloader exception; the
+# exception and resulting native bundle still require release artifact review.
+pyinstaller==6.22.3
+packaging==25.0
+pytest==9.2.0

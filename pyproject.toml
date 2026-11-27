@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools==84.2.1", "wheel==0.48.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "creative-intelligence-engine"
+version = "2.3.2.dev0"
+description = "Free, local-first capability layer for coding and creative workflows"
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{name = "CIE Project"}]
+classifiers = ["Programming Language :: Python :: 3", "Operating System :: OS Independent"]
+dependencies = [
+  "mcp==1.30.0",
+  "PyYAML==6.0.2",
+  "Pillow==13.0.0",
+  "numpy==2.2.3",
+  "scipy==1.15.2",
+  "tree-sitter==0.24.0",
+  "soundfile==0.13.1",
+  "pyloudnorm==0.2.0",
+  "trimesh==4.11.1",
+]
+
+[project.scripts]
+cie = "cie.__main__:main"
+cie-dashboard = "dashboard:main"
+
+[tool.setuptools]
+include-package-data = true
+py-modules = ["mcp_server", "dashboard"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["cie*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+

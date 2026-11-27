@@ -1,0 +1,215 @@
+"""Enforce CIE's direct/transitive dependency and license policy.
+
+Expected to run inside a clean environment containing the installed CIE wheel,
+its runtime dependencies, pip-licenses, and pipdeptree.  The release gate is
+intentionally fail-closed: unknown licenses, unregistered direct dependencies,
+version drift, and unapproved registry entries are errors.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import subprocess
+import sys
+from pathlib import Path
+from typing import Any
+
+try:
+    import tomllib
+except ModuleNotFoundError:  # pragma: no cover - CIE supports Python 3.11+
+    import tomli as tomllib  # type: ignore[no-redef]
+
+import yaml
+
+
+def canonical_name(value: str) -> str:
+    return re.sub(r"[-_.]+", "-", value).lower()
+
+
+_LICENSE_ALIASES = {
+    "mit": "MIT",
+    "mit license": "MIT",
+    "mit-cmu": "MIT-CMU",
+    "bsd-2-clause": "BSD-2-Clause",
+    "bsd 2-clause license": "BSD-2-Clause",
+    "bsd-3-clause": "BSD-3-Clause",
+    "bsd 3-clause license": "BSD-3-Clause",
+    "apache-2.0": "Apache-2.0",
+    "apache license 2.0": "Apache-2.0",
+    "apache software license": "Apache-2.0",
+    "isc": "ISC",
+    "isc license (iscl)": "ISC",
+    "psf-2.0": "PSF-2.0",
+    "python software foundation license": "PSF-2.0",
+    "lgpl-2.1-only": "LGPL-2.1-only",
+    "gnu lesser general public license v2 or later (lgplv2+)": "LGPL-2.1-only",
+}
+
+
+def contains_forbidden_license(value: str) -> bool:
+    """Reject GPL/AGPL identifiers and names without misclassifying LGPL."""
+    upper = value.upper()
+    if re.search(r"\bGNU\s+(?:AFFERO\s+)?GENERAL PUBLIC LICENSE\b", upper):
+        return True
+    if re.search(r"\bAGPL(?:[- ]V?[0-9.]+)?(?:-(?:ONLY|OR-LATER))?\b", upper):
+        return True
+    # The negative lookbehind deliberately avoids treating LGPL as GPL.
+    return bool(re.search(r"(?<![A-Z])GPL(?:[- ]V?[0-9.]+)?(?:-(?:ONLY|OR-LATER))?\b", upper))
+
+
+def direct_dependency_registry_issues(
+    registry: dict[str, Any], direct_pins: dict[str, str], require_release_approval: bool
+) -> list[str]:
+    """Validate direct pins and fail closed on unapproved native/conditional components."""
+    package_registry = {
+        canonical_name(str(item["name"])): item
+        for item in registry.get("packages", [])
+        if isinstance(item, dict) and item.get("name")
+    }
+    issues: list[str] = []
+    for name, version in direct_pins.items():
+        entry = package_registry.get(name)
+        if not entry:
+            issues.append(f"Direct dependency {name}=={version} is missing from deps/registry.yaml")
+            continue
+        if entry.get("tier") != 1:
+            issues.append(f"Direct dependency {name} is not marked Tier 1 in the registry")
+        if str(entry.get("version")) != version:
+            issues.append(f"Direct dependency {name}: pyproject pins {version}, registry says {entry.get('version')}")
+        if require_release_approval and entry.get("release_approved") is not True:
+            issues.append(f"Direct dependency {name} has not been explicitly approved for release")
+
+    if require_release_approval:
+        conditional = set((registry.get("policy") or {}).get("conditional_tier1_licenses") or [])
+        for entry in registry.get("packages", []):
+            if not isinstance(entry, dict):
+                continue
+            tier = entry.get("tier")
+            license_value = str(entry.get("license") or "")
+            # Native libraries are not necessarily represented as Python packages
+            # in pipdeptree; their registry approval must be an independent gate.
+            native_component = tier == "1-native-component"
+            conditional_component = tier == 1 and any(lic in license_value for lic in conditional)
+            if (native_component or conditional_component) and entry.get("release_approved") is not True:
+                issues.append(
+                    f"Conditional/native Tier-1 component {entry.get('name', '<unnamed>')} "
+                    "has not been explicitly approved for release"
+                )
+    return issues
+
+
+def run_json(command: list[str]) -> Any:
+    completed = subprocess.run(command, check=True, capture_output=True, text=True)
+    try:
+        return json.loads(completed.stdout)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"Command did not return valid JSON: {' '.join(command)}") from exc
+
+
+def collect_dependency_tree(tree: Any, root_name: str) -> dict[str, str]:
+    if not isinstance(tree, list):
+        raise RuntimeError("pipdeptree JSON output must be a list")
+    roots = [
+        node for node in tree
+        if isinstance(node, dict)
+        and canonical_name(str(node.get("package_name", ""))) == canonical_name(root_name)
+    ]
+    if len(roots) != 1:
+        raise RuntimeError(f"Expected exactly one installed root package named {root_name}; found {len(roots)}")
+    found: dict[str, str] = {}
+
+    def visit(node: dict[str, Any]) -> None:
+        package = node
+        name = str(package.get("package_name") or "").strip()
+        version = str(package.get("installed_version") or "").strip()
+        if not name or not version:
+            raise RuntimeError("pipdeptree returned a dependency without package name/version")
+        key = canonical_name(name)
+        prior = found.get(key)
+        if prior is not None and prior != version:
+            raise RuntimeError(f"Multiple versions of {name} in dependency tree: {prior} and {version}")
+        found[key] = version
+        for child in node.get("dependencies") or []:
+            if isinstance(child, dict):
+                visit(child)
+
+    visit(roots[0])
+    return found
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--project-root", type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument("--output", type=Path, default=Path("dependency-audit"))
+    parser.add_argument("--require-release-approval", action="store_true")
+    ns = parser.parse_args()
+    root = ns.project_root.resolve()
+    output = ns.output.resolve()
+    output.mkdir(parents=True, exist_ok=True)
+
+    pyproject = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
+    registry = yaml.safe_load((root / "deps" / "registry.yaml").read_text(encoding="utf-8"))
+    project = pyproject.get("project") or {}
+    project_name = str(project.get("name") or "")
+    direct: dict[str, str] = {}
+    for requirement in project.get("dependencies") or []:
+        match = re.fullmatch(r"\s*([A-Za-z0-9_.-]+)==([^;\s]+)\s*", requirement)
+        if not match:
+            raise RuntimeError(f"Tier-1 runtime dependency is not an exact simple pin: {requirement!r}")
+        direct[canonical_name(match.group(1))] = match.group(2)
+
+    issues = direct_dependency_registry_issues(registry, direct, ns.require_release_approval)
+
+    license_rows = run_json(["pip-licenses", "--format=json"])
+    deptree = run_json(["pipdeptree", "--json-tree"])
+    dependencies = collect_dependency_tree(deptree, project_name)
+    licenses: dict[str, str] = {}
+    for row in license_rows:
+        if not isinstance(row, dict):
+            continue
+        name = str(row.get("Name") or row.get("name") or "")
+        raw_license = str(row.get("License") or row.get("license") or "").strip()
+        if name:
+            licenses[canonical_name(name)] = _LICENSE_ALIASES.get(raw_license.lower(), raw_license)
+
+    policy = registry.get("policy") or {}
+    allowed = set(policy.get("tier1_license_allowlist") or [])
+    conditional = set(policy.get("conditional_tier1_licenses") or [])
+    audited_rows: list[dict[str, str]] = []
+    for name, version in sorted(dependencies.items()):
+        license_name = licenses.get(name)
+        if not license_name:
+            issues.append(f"No license metadata found for dependency {name}=={version}")
+            license_name = "UNKNOWN"
+        elif contains_forbidden_license(license_name):
+            issues.append(f"Forbidden GPL/AGPL license on {name}=={version}: {license_name}")
+        elif license_name not in allowed and license_name not in conditional:
+            issues.append(f"License not allowlisted for {name}=={version}: {license_name}")
+        audited_rows.append({"name": name, "version": version, "license": license_name})
+
+    report = {
+        "project": project_name,
+        "direct_pins": direct,
+        "dependency_closure": audited_rows,
+        "issues": issues,
+        "release_approval_required": ns.require_release_approval,
+    }
+    report_path = output / "dependency-policy-report.json"
+    report_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    if issues:
+        print("Dependency policy FAILED:")
+        for issue in issues:
+            print(f"- {issue}")
+        print(f"Report: {report_path}")
+        return 1
+    print(f"Dependency policy passed for {len(audited_rows)} runtime packages. Report: {report_path}")
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except (OSError, RuntimeError, KeyError, ValueError) as exc:
+        print(f"Dependency policy could not be validated: {exc}", file=sys.stderr)
+        raise SystemExit(2)

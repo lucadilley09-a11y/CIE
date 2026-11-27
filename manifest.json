@@ -1,0 +1,45 @@
+{
+  "manifest_version": "0.3",
+  "name": "creative-intelligence-engine",
+  "display_name": "Creative Intelligence Engine (CIE)",
+  "version": "2.3.2",
+  "description": "Free, local-first capability layer for coding, asset creation, 3D, animation, audio, and memory.",
+  "author": {
+    "name": "CIE Project"
+  },
+  "license": "MIT",
+  "server": {
+    "type": "binary",
+    "entry_point": "dist/cie-mcp.exe",
+    "mcp_config": {
+      "command": "${__dirname}/dist/cie-mcp.exe",
+      "args": [
+        "--stdio"
+      ]
+    }
+  },
+  "tools": [
+    {
+      "name": "cie_discover",
+      "description": "Discover CIE capabilities by area, keyword, or project."
+    },
+    {
+      "name": "cie_run",
+      "description": "Execute a CIE capability by ID with structured inputs and detail budget."
+    },
+    {
+      "name": "cie_memory",
+      "description": "Search and manage Obsidian-compatible memory; writes and destructive actions are permission-gated."
+    },
+    {
+      "name": "cie_status",
+      "description": "Inspect CIE health, jobs, index status, enabled modules, and local resources."
+    }
+  ],
+  "compatibility": {
+    "platforms": [
+      "win32"
+    ],
+    "claude_desktop": ">=0.9.0"
+  }
+}
