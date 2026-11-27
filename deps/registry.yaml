@@ -32,8 +32,8 @@ packages:
   license: MIT
   tier: 1
   purpose: MCP server protocol and FastMCP integration
-  verification: clean-hosted-CI-runtime-closure-audited;license-notices-included-in-standalone-bundles;no-known-CVEs
-  release_approved: true
+  verification: metadata-and-source-not-independently-audited
+  release_approved: false
   provenance:
     intended_distribution: PyPI
     verified: false
@@ -43,7 +43,7 @@ packages:
     status: pending-installed-environment-audit
     evidence_file: pipdeptree JSON and dependency-policy-report.json
   wheel_availability:
-    status: built-and-installed-in-hosted-CI
+    status: pending-platform-build
     targets:
       windows_10_11_x64: unverified
       ubuntu_22_04_x64: unverified
@@ -58,8 +58,8 @@ packages:
   license: MIT
   tier: 1
   purpose: Structured dependency and configuration manifests
-  verification: clean-hosted-CI-runtime-closure-audited;license-notices-included-in-standalone-bundles;no-known-CVEs
-  release_approved: true
+  verification: metadata-and-source-not-independently-audited
+  release_approved: false
   provenance:
     intended_distribution: PyPI
     verified: false
@@ -69,7 +69,7 @@ packages:
     status: pending-installed-environment-audit
     evidence_file: pipdeptree JSON and dependency-policy-report.json
   wheel_availability:
-    status: built-and-installed-in-hosted-CI
+    status: pending-platform-build
     targets:
       windows_10_11_x64: unverified
       ubuntu_22_04_x64: unverified
@@ -84,8 +84,8 @@ packages:
   license: MIT-CMU
   tier: 1
   purpose: 2D image and sprite processing
-  verification: clean-hosted-CI-runtime-closure-audited;license-notices-included-in-standalone-bundles;no-known-CVEs
-  release_approved: true
+  verification: metadata-and-source-not-independently-audited
+  release_approved: false
   provenance:
     intended_distribution: PyPI
     verified: false
@@ -95,7 +95,7 @@ packages:
     status: pending-installed-environment-audit
     evidence_file: pipdeptree JSON and dependency-policy-report.json
   wheel_availability:
-    status: built-and-installed-in-hosted-CI
+    status: pending-platform-build
     targets:
       windows_10_11_x64: unverified
       ubuntu_22_04_x64: unverified
@@ -110,8 +110,8 @@ packages:
   license: BSD-3-Clause
   tier: 1
   purpose: Numerical core
-  verification: clean-hosted-CI-runtime-closure-audited;license-notices-included-in-standalone-bundles;no-known-CVEs
-  release_approved: true
+  verification: metadata-and-source-not-independently-audited
+  release_approved: false
   provenance:
     intended_distribution: PyPI
     verified: false
@@ -121,7 +121,7 @@ packages:
     status: pending-installed-environment-audit
     evidence_file: pipdeptree JSON and dependency-policy-report.json
   wheel_availability:
-    status: built-and-installed-in-hosted-CI
+    status: pending-platform-build
     targets:
       windows_10_11_x64: unverified
       ubuntu_22_04_x64: unverified
@@ -136,8 +136,8 @@ packages:
   license: BSD-3-Clause
   tier: 1
   purpose: Numerical and signal-processing algorithms
-  verification: clean-hosted-CI-runtime-closure-audited;license-notices-included-in-standalone-bundles;no-known-CVEs
-  release_approved: true
+  verification: metadata-and-source-not-independently-audited
+  release_approved: false
   provenance:
     intended_distribution: PyPI
     verified: false
@@ -147,7 +147,7 @@ packages:
     status: pending-installed-environment-audit
     evidence_file: pipdeptree JSON and dependency-policy-report.json
   wheel_availability:
-    status: built-and-installed-in-hosted-CI
+    status: pending-platform-build
     targets:
       windows_10_11_x64: unverified
       ubuntu_22_04_x64: unverified
@@ -162,8 +162,8 @@ packages:
   license: MIT
   tier: 1
   purpose: Syntax-tree parsing
-  verification: clean-hosted-CI-runtime-closure-audited;license-notices-included-in-standalone-bundles;no-known-CVEs
-  release_approved: true
+  verification: metadata-and-source-not-independently-audited
+  release_approved: false
   provenance:
     intended_distribution: PyPI
     verified: false
@@ -173,7 +173,7 @@ packages:
     status: pending-installed-environment-audit
     evidence_file: pipdeptree JSON and dependency-policy-report.json
   wheel_availability:
-    status: built-and-installed-in-hosted-CI
+    status: pending-platform-build
     targets:
       windows_10_11_x64: unverified
       ubuntu_22_04_x64: unverified
@@ -188,8 +188,8 @@ packages:
   license: MIT
   tier: 1
   purpose: Mesh data structures and geometry operations
-  verification: clean-hosted-CI-runtime-closure-audited;license-notices-included-in-standalone-bundles;no-known-CVEs
-  release_approved: true
+  verification: metadata-and-source-not-independently-audited
+  release_approved: false
   provenance:
     intended_distribution: PyPI
     verified: false
@@ -199,7 +199,7 @@ packages:
     status: pending-installed-environment-audit
     evidence_file: pipdeptree JSON and dependency-policy-report.json
   wheel_availability:
-    status: built-and-installed-in-hosted-CI
+    status: pending-platform-build
     targets:
       windows_10_11_x64: unverified
       ubuntu_22_04_x64: unverified
@@ -214,17 +214,17 @@ packages:
   license: BSD-3-Clause
   tier: 1
   purpose: Graph operations required by trimesh mesh repair
-  verification: clean-hosted-CI-runtime-closure-audited;license-notices-included-in-standalone-bundles;no-known-CVEs
-  release_approved: true
+  verification: metadata-and-source-not-independently-audited
+  release_approved: false
   provenance:
     intended_distribution: PyPI
-    verified: true
-    note: Installed from the configured public PyPI index in hosted CI; package metadata and runtime license files were audited. Upstream maintainer attestations are not claimed.
+    verified: false
+    note: Distribution source and artifact provenance remain pending review.
   transitive_dependencies:
     status: pending-installed-environment-audit
     evidence_file: pipdeptree JSON and dependency-policy-report.json
   wheel_availability:
-    status: built-and-installed-in-hosted-CI
+    status: pending-platform-build
     targets:
       windows_10_11_x64: unverified
       ubuntu_22_04_x64: unverified
