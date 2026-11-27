@@ -71,9 +71,14 @@ class ExternalToolTests(unittest.TestCase):
 
     def test_lufs_measures_a_tone(self) -> None:
         import numpy as np
-        import soundfile as sf
+        import wave
         t = np.linspace(0, 1.0, 48000, endpoint=False)
-        sf.write(str(self.proj / "tone.wav"), 0.5 * np.sin(2 * np.pi * 440 * t), 48000)
+        pcm = (0.5 * np.sin(2 * np.pi * 440 * t) * 32767).astype(np.int16)
+        with wave.open(str(self.proj / "tone.wav"), "wb") as wav:
+            wav.setnchannels(1)
+            wav.setsampwidth(2)
+            wav.setframerate(48000)
+            wav.writeframes(pcm.tobytes())
         res = external.audio_lufs("tone.wav")
         self.assertEqual(res["status"], "ok")
         self.assertLess(res["data"]["integrated_lufs"], 0)
