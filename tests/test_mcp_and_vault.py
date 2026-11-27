@@ -38,7 +38,8 @@ class McpAndVaultTests(unittest.TestCase):
         self.assertEqual(len(bl["unlinked_mentions"]), 1)
 
         # Update and restore version
-        mcp_server.cie_memory(action="save", title="WAV Inspector", body="Overwritten body", folder="Knowledge/Audio")
+        updated = mcp_server.cie_memory(action="save", title="WAV Inspector", body="Overwritten body", folder="Knowledge/Audio")
+        self.assertEqual(updated["status"], "ok", msg=str(updated))
         versions = mcp_server.cie_memory(action="versions", rel_path="Knowledge/Audio/WAV Inspector.md")["versions"]
         self.assertGreaterEqual(len(versions), 1)
         config.approve_tool("memory.restore")
