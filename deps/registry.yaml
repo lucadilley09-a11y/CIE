@@ -263,6 +263,9 @@ packages:
 - name: OpenBLAS
   version: null
   license: BSD-3-Clause-Attribution
+  license_variants:
+  - BSD-3-Clause
+  - BSD-3-Clause-Attribution
   tier: 1-native-component
   purpose: Native BLAS/LAPACK library bundled in NumPy/SciPy platform wheels
   verification: embedded-wheel-notice-observed; attribution and redistribution review pending
