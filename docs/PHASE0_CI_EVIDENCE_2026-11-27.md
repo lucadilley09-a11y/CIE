@@ -51,3 +51,21 @@ The latest Windows artifact was downloaded and inspected directly: the outer Act
 2. Resolve or document the macOS SciPy SDK warning and confirm required license notices in the actual downloaded bundles.
 3. Run the final Windows standalone bundle on the owner's Windows PC, verify it starts and reports a healthy doctor result without system Python.
 4. Rerun CI and the release audit after any changes. Phase 0 can be closed only when every mandatory gate has evidence.
+
+
+## Expanded platform wheel and native-license evidence
+
+Follow-up workflow: https://github.com/lucadilley09-a11y/CIE/actions/runs/45956196754
+
+- Built 37 Linux wheels, 37 macOS wheels, and 38 Windows wheels, including the CIE project wheel, for 112 platform wheel artifacts total.
+- The verifier checked each external wheel SHA-256 against the corresponding PyPI release JSON metadata. All three platform wheelhouses passed.
+- The evidence records wheel SHA-256 values, license/notice file hashes, native binary hashes, package license metadata, PyPI source/project URLs, and a generated CycloneDX SBOM. Evidence artifact: https://github.com/lucadilley09-a11y/CIE/actions/runs/45956196754/artifacts/15178633308
+- Platform coverage observed: Linux x86_64, Windows AMD64, and macOS arm64.
+- pip-audit again reported no known vulnerabilities.
+- Wheel-level inspection found additional bundled native components in NumPy/SciPy that were not visible in the ordinary Python dependency tree:
+  - GCC runtime library — GPL-3.0-with-GCC-exception
+  - libquadmath — LGPL-2.1-or-later
+  - OpenBLAS and LAPACK — BSD-3-Clause-Attribution (the NumPy OpenBLAS notice also reports BSD-3-Clause)
+- These components and certifi==2026.11.20 (MPL-2.0) are registered as conditional/native release-review items. Their approvals remain false; the evidence collection does not silently approve them.
+- The release audit therefore remains intentionally blocked by eight unapproved direct dependencies, four native components, and the MPL-2.0 certifi transitive dependency. No release tag should be created.
+- The expanded wheel-evidence gate passed on all three operating systems. The full CI test matrix is being rerun after updating its gate assertion to include the new wheelhouse workflow; the owner's local Windows acceptance test remains outstanding.
