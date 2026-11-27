@@ -68,6 +68,33 @@ def verify_platform_wheelhouses(
 ) -> dict[str, Any]:
     pyproject = tomllib.loads((project_root / "pyproject.toml").read_text(encoding="utf-8"))
     project = pyproject["project"]
+    registry_data = yaml.safe_load((project_root / "deps" / "registry.yaml").read_text(encoding="utf-8"))
+    registry = {
+        canonical_name(str(item["name"])): item
+        for item in registry_data.get("packages", [])
+        if isinstance(item, dict) and item.get("name")
+    }
+    policy = registry_data.get("policy") or {}
+    allowed_licenses = set(policy.get("tier1_license_allowlist") or [])
+    conditional_licenses = set(policy.get("conditional_tier1_licenses") or [])
+    aliases = {
+        "mit license": "MIT",
+        "mit": "MIT",
+        "mit-cmu": "MIT-CMU",
+        "mit-0": "MIT-0",
+        "bsd license": "BSD-3-Clause",
+        "bsd-3-clause": "BSD-3-Clause",
+        "bsd 3-clause license": "BSD-3-Clause",
+        "bsd-2-clause": "BSD-2-Clause",
+        "apache software license": "Apache-2.0",
+        "apache license 2.0": "Apache-2.0",
+        "apache-2.0": "Apache-2.0",
+        "apache-2.0 or bsd-3-clause": "Apache-2.0 OR BSD-3-Clause",
+        "mozilla public license 2.0 (mpl 2.0)": "MPL-2.0",
+        "psf-2.0": "PSF-2.0",
+        "python software foundation license": "PSF-2.0",
+        "mit license (mit)": "MIT",
+    }
     direct: dict[str, str] = {}
     for requirement in project.get("dependencies", []):
         match = re.fullmatch(r"\s*([A-Za-z0-9_.-]+)==([^;\s]+)\s*", requirement)
@@ -140,9 +167,24 @@ def verify_platform_wheelhouses(
             license_meta = contents.get("license_metadata") or {}
             license_files = contents.get("license_files") or []
             native = contents.get("native_binaries") or []
-            if not (license_meta.get("license") or license_meta.get("license_expression")
-                    or license_meta.get("classifiers")):
+            raw_license = str(license_meta.get("license_expression") or license_meta.get("license") or "").strip()
+            if not raw_license and license_meta.get("classifiers"):
+                raw_license = str(license_meta["classifiers"][0]).split(" :: ")[-1]
+            normalized_license = aliases.get(raw_license.lower(), raw_license)
+            if not normalized_license:
                 raise RuntimeError(f"No license metadata recorded for {name}=={version} ({system})")
+            if normalized_license not in allowed_licenses and normalized_license not in conditional_licenses:
+                raise RuntimeError(
+                    f"License is not allowlisted for {name}=={version} ({system}): {normalized_license}"
+                )
+            if normalized_license in conditional_licenses:
+                registry_entry = registry.get(key)
+                if registry_entry is None:
+                    raise RuntimeError(f"Conditional-license package {name} is missing from deps/registry.yaml")
+                if str(registry_entry.get("version") or "") != version:
+                    raise RuntimeError(f"Conditional-license package {name} version differs from deps/registry.yaml")
+                if registry_entry.get("release_approved") is not True:
+                    raise RuntimeError(f"Conditional-license package {name} is not approved for release")
             if native and not license_files:
                 raise RuntimeError(
                     f"Native wheel {name}=={version} has no bundled license/notice file ({system})"
@@ -150,12 +192,14 @@ def verify_platform_wheelhouses(
             verified_entries.append({
                 "name": str(name), "version": version, "filename": filename,
                 "sha256": actual_hash, "license_metadata": license_meta,
+                "normalized_license": normalized_license,
                 "license_files": license_files, "native_binaries": native,
                 "pypi": pypi,
             })
             all_wheels[(system, key, version)] = {
                 "name": str(name), "version": version, "filename": filename,
                 "sha256": actual_hash, "license_metadata": license_meta,
+                "normalized_license": normalized_license,
                 "license_files": license_files, "native_binaries": native,
                 "pypi": pypi,
             }
@@ -191,7 +235,7 @@ def verify_platform_wheelhouses(
     sbom_components: list[dict[str, Any]] = []
     for wheel in sorted(all_wheels.values(), key=lambda item: (item["name"].lower(), item["version"], item["filename"])):
         metadata = wheel["license_metadata"]
-        license_value = metadata.get("license_expression") or metadata.get("license") or "NOASSERTION"
+        license_value = wheel.get("normalized_license") or metadata.get("license_expression") or metadata.get("license") or "NOASSERTION"
         sbom_components.append({
             "type": "library",
             "name": wheel["name"],
