@@ -53,7 +53,7 @@ packages:
       ubuntu_22_04_x64: observed
       windows_10_11_x64: observed
       macos_15_arm64: observed
-    hashes: verified-in-platform-wheelhouse-evidence.jsonon
+    hashes: verified-in-platform-wheelhouse-evidence.json
   python_compatibility:
     target: 3.11, 3.12, 3.13
     verified: false
