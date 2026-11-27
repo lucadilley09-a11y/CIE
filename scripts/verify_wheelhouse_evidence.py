@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import functools
 import json
 import re
 import sys
@@ -31,6 +32,7 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+@functools.lru_cache(maxsize=None)
 def pypi_release_evidence(name: str, version: str) -> dict[str, Any]:
     """Compare wheel bytes to PyPI's published SHA-256 and capture source metadata."""
     quoted = urllib.parse.quote(name, safe="")
@@ -110,7 +112,7 @@ def verify_platform_wheelhouses(
 
     platforms: set[str] = set()
     platform_reports: list[dict[str, Any]] = []
-    all_wheels: dict[tuple[str, str], dict[str, Any]] = {}
+    all_wheels: dict[tuple[str, str, str], dict[str, Any]] = {}
     for manifest_path in manifests:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         env = manifest.get("build_environment") or {}
