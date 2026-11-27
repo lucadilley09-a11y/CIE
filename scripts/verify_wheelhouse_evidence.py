@@ -266,6 +266,27 @@ def verify_platform_wheelhouses(
                    for path in license_paths):
             raise RuntimeError("certifi wheel is missing its MPL license text")
 
+    embedded_sbom: dict[tuple[str, str], dict[str, Any]] = {}
+    for wheel in all_wheels.values():
+        for component in wheel.get("embedded_components", []):
+            component_name = str(component.get("name") or "")
+            component_license = str(component.get("license") or "")
+            key = (canonical_name(component_name), component_license)
+            record = embedded_sbom.setdefault(key, {
+                "type": "library",
+                "bom-ref": f"urn:cie:embedded:{canonical_name(component_name)}:{component_license}",
+                "name": component_name,
+                "licenses": [{"license": {"name": component_license}}],
+                "properties": [
+                    {"name": "cie:source-url", "value": str(component.get("source_url") or "")},
+                    {"name": "cie:declared-files", "value": str(component.get("declared_files") or "")},
+                ],
+            })
+            record["properties"].append({
+                "name": "cie:bundled-by",
+                "value": f"{wheel['name']}=={wheel['version']} ({wheel['filename']})",
+            })
+
     sbom_components: list[dict[str, Any]] = []
     for wheel in sorted(all_wheels.values(), key=lambda item: (item["name"].lower(), item["version"], item["filename"])):
         metadata = wheel["license_metadata"]
@@ -283,6 +304,9 @@ def verify_platform_wheelhouses(
                 {"name": "cie:native-binary-count", "value": str(len(wheel["native_binaries"]))},
             ],
         })
+    sbom_components.extend(
+        embedded_sbom[key] for key in sorted(embedded_sbom)
+    )
     return {
         "schema_version": 1,
         "project": {"name": project["name"], "version": project["version"]},
