@@ -167,7 +167,7 @@ Checked every Phase 0 item in the owner's complete development plan (0.1–0.4) 
 | 0.1 Dependency and license policy | Passed (hosted) | Release audit run 45958230100: no known vulnerabilities, policy passed for 37 runtime distributions. See `docs/PHASE0_CI_EVIDENCE_2026-11-27.md` |
 | 0.1 Code and secret security scan | Added, first hosted run pending | New `security` job in `ci.yml`: Bandit (fails on high severity), Gitleaks over full history, CIE's own `security_checks` on itself (0 high findings locally) |
 | 0.1 Standalone packaging | Passed (hosted) | CI run 45958230092: 3/3 MCPB builds with `--version`/`--doctor` smoke tests |
-| 0.1 Windows/Linux/macOS | Passed (hosted) | CI run 45958230092: 9/9 OS × Python jobs |
+| 0.1 Supported platforms | Windows only (owner decision, 2026-11-27) | CIE targets the owner's Windows PC. CI, release wheel evidence, and standalone bundles now run on `windows-2022` only; macOS and Linux jobs removed (macOS jobs had queued for ~10 hours). Earlier 3-platform passes (run 45958230092) remain on record. Code-audit jobs (security scan, dependency audit) still run on Ubuntu because they check source, not where CIE runs |
 | 0.1 Docs match implementation | Done for this update | README, CHANGELOG, this file |
 | 0.2 Project registration | Done | `project.register/list/detect/update/remove`, CLI `cie project`, 10 regression tests |
 | 0.3 Unified index, consistent counts | Done | `eff.incremental_index` is the single writer; counts equality test |

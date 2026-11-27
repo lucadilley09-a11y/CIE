@@ -326,11 +326,12 @@ def test_registry_direct_pin_and_approval_gate_is_fail_closed() -> None:
     assert any("scipy" in issue and "missing from deps/registry.yaml" in issue for issue in issues)
 
 
-def test_online_first_ci_covers_supported_python_and_native_platforms() -> None:
+def test_online_first_ci_covers_supported_python_on_windows() -> None:
+    # Owner decision (2026-11-27): CIE targets the owner's Windows PC only.
     ci = yaml.safe_load((PROJECT_ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
     release = yaml.safe_load((PROJECT_ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8"))
     supported = ["3.11", "3.12", "3.13"]
-    platforms = ["ubuntu-22.04", "windows-2022", "macos-15"]
+    platforms = ["windows-2022"]
     assert ci["jobs"]["tests"]["strategy"]["matrix"]["python-version"] == supported
     assert ci["jobs"]["tests"]["strategy"]["matrix"]["os"] == platforms
     assert ci["jobs"]["standalone"]["strategy"]["matrix"]["os"] == platforms
@@ -341,6 +342,10 @@ def test_online_first_ci_covers_supported_python_and_native_platforms() -> None:
     assert release["jobs"]["verify-platform-wheelhouses"]["needs"] == "platform-wheelhouses"
     assert release["jobs"]["dependency-audit"]["needs"] == "verify-platform-wheelhouses"
     assert release["jobs"]["standalone-bundles"]["needs"] == "dependency-audit"
+    assert release["jobs"]["platform-wheelhouses"]["strategy"]["matrix"]["os"] == platforms
+    assert release["jobs"]["standalone-bundles"]["strategy"]["matrix"]["os"] == platforms
+    verify_steps = release["jobs"]["verify-platform-wheelhouses"]["steps"]
+    assert any("--platforms Windows" in str(step.get("run", "")) for step in verify_steps)
 
 
 def test_build_system_requirements_match_pep517_metadata() -> None:

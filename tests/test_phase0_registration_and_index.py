@@ -169,3 +169,17 @@ def test_dependency_policy_accepts_flat_json_tree() -> None:
         "creative-intelligence-engine": "2.3.2.dev0",
         "pyyaml": "6.0.2",
     }
+
+
+def test_wheelhouse_verifier_platform_selection(tmp_path: Path) -> None:
+    import sys
+    root = Path(__file__).resolve().parents[1]
+    sys.path.insert(0, str(root / "scripts"))
+    from verify_wheelhouse_evidence import verify_platform_wheelhouses
+    # Windows-only selection expects exactly one manifest; the default expects three.
+    with pytest.raises(RuntimeError, match="Expected exactly 1 platform"):
+        verify_platform_wheelhouses(tmp_path, root, ("Windows",))
+    with pytest.raises(RuntimeError, match="Expected exactly 3 platform"):
+        verify_platform_wheelhouses(tmp_path, root)
+    with pytest.raises(RuntimeError, match="Unsupported platform"):
+        verify_platform_wheelhouses(tmp_path, root, ("Plan9",))

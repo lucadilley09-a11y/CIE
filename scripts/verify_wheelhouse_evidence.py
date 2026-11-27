@@ -65,9 +65,15 @@ def pypi_release_evidence(name: str, version: str) -> dict[str, Any]:
     }
 
 
+ALL_PLATFORMS = ("Windows", "Linux", "Darwin")
+
+
 def verify_platform_wheelhouses(
-    wheelhouses_root: Path, project_root: Path
+    wheelhouses_root: Path, project_root: Path, required_platforms: tuple[str, ...] = ALL_PLATFORMS
 ) -> dict[str, Any]:
+    required = set(required_platforms)
+    if not required or not required <= set(ALL_PLATFORMS):
+        raise RuntimeError(f"Unsupported platform selection: {sorted(required_platforms)}")
     pyproject = tomllib.loads((project_root / "pyproject.toml").read_text(encoding="utf-8"))
     project = pyproject["project"]
     registry_data = yaml.safe_load((project_root / "deps" / "registry.yaml").read_text(encoding="utf-8"))
@@ -105,9 +111,9 @@ def verify_platform_wheelhouses(
         direct[canonical_name(match.group(1))] = match.group(2)
 
     manifests = sorted(wheelhouses_root.glob("*/wheelhouse-manifest.json"))
-    if len(manifests) != 3:
+    if len(manifests) != len(required):
         raise RuntimeError(
-            f"Expected exactly 3 platform wheelhouse manifests, found {len(manifests)}"
+            f"Expected exactly {len(required)} platform wheelhouse manifests, found {len(manifests)}"
         )
 
     platforms: set[str] = set()
@@ -118,7 +124,7 @@ def verify_platform_wheelhouses(
         env = manifest.get("build_environment") or {}
         system = str(env.get("system") or "")
         machine = str(env.get("machine") or "")
-        if system not in {"Windows", "Linux", "Darwin"}:
+        if system not in required:
             raise RuntimeError(f"Unexpected platform in {manifest_path}: {system!r}")
         if system in platforms:
             raise RuntimeError(f"Duplicate platform wheelhouse: {system}")
@@ -253,13 +259,13 @@ def verify_platform_wheelhouses(
             "wheels": verified_entries,
         })
 
-    if platforms != {"Windows", "Linux", "Darwin"}:
+    if platforms != required:
         raise RuntimeError(f"Platform coverage incomplete: {sorted(platforms)}")
 
     # Conditional-license component must carry its own license text in every target wheel.
     certifi = [w for w in all_wheels.values() if canonical_name(w["name"]) == "certifi"]
-    if len(certifi) != 3:
-        raise RuntimeError("certifi must be present in all three platform wheelhouses")
+    if len(certifi) != len(required):
+        raise RuntimeError("certifi must be present in every required platform wheelhouse")
     for wheel in certifi:
         license_paths = [str(item.get("path", "")).lower() for item in wheel["license_files"]]
         if not any(path.endswith("license") or path.endswith("license.txt") or "/license." in path
@@ -332,8 +338,14 @@ def main() -> int:
     parser.add_argument("--wheelhouses", type=Path, required=True)
     parser.add_argument("--project-root", type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--platforms", nargs="+", choices=ALL_PLATFORMS, default=list(ALL_PLATFORMS),
+        help="Platforms that must each have exactly one wheelhouse (default: all three)",
+    )
     args = parser.parse_args()
-    evidence = verify_platform_wheelhouses(args.wheelhouses.resolve(), args.project_root.resolve())
+    evidence = verify_platform_wheelhouses(
+        args.wheelhouses.resolve(), args.project_root.resolve(), tuple(args.platforms)
+    )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(evidence, indent=2) + "\n", encoding="utf-8")
     sbom_path = args.output.with_name("sbom-platform-wheelhouses.json")

@@ -21,6 +21,10 @@
 - New `security` job in `ci.yml`: Bandit (fails on high-severity findings), Gitleaks over full git history with redacted output, and CIE's own Tier-1 `security_checks` run against CIE itself. Reports upload as the `cie-security-reports` artifact.
 - `.gitleaks.toml` allowlists only the intentional fake secrets in the redaction tests.
 
+### Windows-only targets
+- Owner decision: CIE targets Windows only. CI test and standalone matrices, release wheelhouses, and release bundles run on `windows-2022` only.
+- `scripts/verify_wheelhouse_evidence.py` gains `--platforms` (default: all three, so existing behavior is unchanged when omitted); the release workflow passes `--platforms Windows`.
+
 ### Fixes
 - Regression test that the dependency-policy parser accepts the flat pipdeptree `--json-tree` shape (parser fix itself landed separately as "Support pipdeptree JSON tree format").
 - Added `tests/test_phase0_registration_and_index.py` (10 regression tests).
