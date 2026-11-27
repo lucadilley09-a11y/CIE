@@ -9,8 +9,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: cie-ci-${{ github.ref }}-${{ github.sha }}
-  cancel-in-progress: false
+  group: cie-ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   tests:
