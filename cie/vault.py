@@ -36,7 +36,9 @@ VAULT_DIRS = [
 
 
 def ensure_vault_layout(vault: Path | None = None) -> Path:
-    v = vault or get_vault_root()
+    # Canonicalize symlinked platform temp paths (notably macOS /var -> /private/var)
+    # before any relative_to checks or writes.
+    v = (vault or get_vault_root()).resolve()
     for rel in VAULT_DIRS:
         (v / rel).mkdir(parents=True, exist_ok=True)
     # Seed 00-Index files only if missing (never overwrite user edits)
