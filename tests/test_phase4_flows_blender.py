@@ -305,6 +305,7 @@ def test_blender_detection_prefers_newest(tmp_path: Path, monkeypatch: pytest.Mo
     monkeypatch.delenv("ProgramFiles(x86)", raising=False)
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "none"))
     monkeypatch.setattr(diagnostics.shutil, "which", lambda name: None)
+    monkeypatch.setattr(diagnostics, "_blender_from_registry", lambda: [])  # ignore a real install on the test PC
     monkeypatch.setattr(diagnostics.Path, "home", staticmethod(lambda: tmp_path / "home"))
     cands = diagnostics.blender_candidates()
     assert "5.1" in str(cands[0])
@@ -320,3 +321,20 @@ def test_rollback_removes_a_created_game(env) -> None:
     d = reg.run("flow.resume", {"run_id": res["data"]["run_id"]})["data"]
     assert d["status"] == "rolled_back" and d["failed_step"] == "make"
     assert not (root / "games" / "doomed" / "index.html").exists()
+
+
+def test_bake_checks_catch_missed_rays(tmp_path: Path) -> None:
+    import numpy as np
+    from PIL import Image
+
+    from cie import blender
+    from cie import mesh3d as M
+    m = M.uv_unwrap(M.box())
+    good, bad = tmp_path / "good.png", tmp_path / "bad.png"
+    Image.new("RGB", (64, 64), (150, 100, 60)).save(good)
+    arr = np.full((64, 64, 3), (150, 100, 60), np.uint8)
+    arr[:, :40] = 0  # most of the islands never got hit
+    Image.fromarray(arr).save(bad)
+    assert not [i for i in blender.bake_checks(m, {"color": str(good)}) if "empty" in i["message"]]
+    issues = blender.bake_checks(m, {"color": str(bad)})
+    assert any(i["severity"] == "error" and "empty" in i["message"] for i in issues)

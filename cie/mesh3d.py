@@ -1229,7 +1229,8 @@ def validate(m: Mesh, target: str = "generic") -> dict[str, Any]:
     issues: list[dict[str, Any]] = []
     stats: dict[str, Any] = {"vertices": int(len(m.V)), "triangles": int(len(m.F)), "materials": len(m.materials)}
     if not len(m.F):
-        return {"stats": stats, "issues": [{"severity": "error", "message": "Mesh has no faces."}], "verdict": "fail"}
+        return {"stats": stats, "issues": [{"severity": "error", "message": "Mesh has no faces."}], "verdict": "fail",
+                "boundary": np.zeros((0, 2), dtype=np.int64), "_split": m}
     w = weld(m, 1e-6)
     he, eid, edges = _edge_map(w.F)
     counts = np.bincount(eid, minlength=len(edges))
@@ -1794,6 +1795,16 @@ def save(m: Mesh, path: Path, texture: np.ndarray | None = None) -> list[Path]:
 # ---------------------------------------------------------------------------
 # Texture baking: material colours + patterns into a UV atlas
 # ---------------------------------------------------------------------------
+
+
+def uv_coverage_mask(m: Mesh, width: int, height: int) -> np.ndarray:
+    """Pixels of a width x height texture that some triangle's UVs cover."""
+    mask = Image.new("L", (int(width), int(height)), 0)
+    draw = ImageDraw.Draw(mask)
+    for tri in m.UV:
+        pts = [(float(u) * width, (1.0 - float(v)) * height) for u, v in tri]
+        draw.polygon(pts, fill=255)
+    return np.asarray(mask) > 0
 
 
 def bake_atlas(m: Mesh, size: int = 256, seed: int = 0) -> np.ndarray:

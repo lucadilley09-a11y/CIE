@@ -284,7 +284,7 @@ def do_ops(obj, ops: list) -> list:
             m.limit_method = "ANGLE"
             m.angle_limit = math.radians(float(op.get("angle", 30)))
             if hasattr(m, "harden_normals"):
-                m.harden_normals = bool(op.get("harden_normals", False))
+                m.harden_normals = bool(op.get("harden_normals", True))  # flat faces stay flat under smooth shading
             if hasattr(m, "profile"):
                 m.profile = float(op.get("profile", 0.5))
         elif kind == "boolean":
@@ -298,12 +298,41 @@ def do_ops(obj, ops: list) -> list:
                 cutter = join(import_file(cutter_spec["file"]))
             else:
                 cutter = primitive(cutter_spec)
-            m = obj.modifiers.new("Boolean", "BOOLEAN")
-            m.operation = {"union": "UNION", "difference": "DIFFERENCE", "intersect": "INTERSECT"}[op.get("operation", "difference")]
-            m.object = cutter
-            m.solver = "EXACT"
-            apply_modifiers(obj)
+            apply_modifiers(obj)  # finish earlier ops first so the cut sees the real shape
+            keep = obj.data.copy()
+            operation = {"union": "UNION", "difference": "DIFFERENCE", "intersect": "INTERSECT"}[op.get("operation", "difference")]
+            solvers = [s_ for s_ in ("EXACT", "MANIFOLD", "FLOAT", "FAST")
+                       if s_ in [e.identifier for e in bpy.types.BooleanModifier.bl_rna.properties["solver"].enum_items]]
+            done = False
+            for solver in solvers:
+                obj.data = keep.copy()
+                m = obj.modifiers.new("Boolean", "BOOLEAN")
+                m.operation = operation
+                m.object = cutter
+                m.solver = solver
+                if solver == "EXACT":
+                    # game models are often several overlapping parts: let the exact solver handle that
+                    if hasattr(m, "use_self"):
+                        m.use_self = True
+                    if hasattr(m, "use_hole_tolerant"):
+                        m.use_hole_tolerant = True
+                try:
+                    apply_modifiers(obj)
+                except RuntimeError as exc:
+                    log(f"boolean {solver} failed: {exc}")
+                    obj.modifiers.clear()
+                    continue
+                if len(obj.data.polygons) > 0:
+                    done = True
+                    if solver != solvers[0]:
+                        log(f"boolean used the {solver} solver (the exact one returned nothing)")
+                    break
+                log(f"boolean {solver} removed everything; trying the next solver")
             bpy.data.objects.remove(cutter, do_unlink=True)
+            if not done:
+                obj.data = keep
+                raise ValueError("The boolean removed the whole model with every solver. Check the cutter's position/size "
+                                 "(CIE coordinates, metres, Y up), or remesh the model first so it is one closed shell.")
         elif kind == "subdivide":
             m = obj.modifiers.new("Subdivision", "SUBSURF")
             m.levels = m.render_levels = int(op.get("levels", 2))
@@ -418,8 +447,8 @@ def setup_stage(objs: list, transparent: bool = True) -> tuple[Vector, float]:
     bg = world.node_tree.nodes.get("Background")
     if bg:
         bg.inputs[0].default_value = (0.05, 0.055, 0.065, 1)
-        bg.inputs[1].default_value = 0.6
-    for name, energy, direction, size in (("key", 900, (1.0, -1.2, 1.4), 1.2), ("fill", 300, (-1.4, -0.8, 0.6), 2.0), ("rim", 600, (0.2, 1.5, 1.2), 1.0)):
+        bg.inputs[1].default_value = 0.35
+    for name, energy, direction, size in (("key", 420, (1.0, -1.2, 1.4), 1.2), ("fill", 140, (-1.4, -0.8, 0.6), 2.0), ("rim", 280, (0.2, 1.5, 1.2), 1.0)):
         light = bpy.data.lights.new(name, "AREA")
         light.energy = energy * radius * radius
         light.size = size * radius
@@ -511,7 +540,7 @@ def smart_uv(obj) -> None:
     bpy.ops.object.mode_set(mode="OBJECT")
 
 
-def bake(low, high, out_dir: str, stem: str, size: int, maps: list, extrusion: float) -> dict:
+def bake(low, high, out_dir: str, stem: str, size: int, maps: list, extrusion: float | None) -> dict:
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
     scene.cycles.device = "CPU"
@@ -533,6 +562,10 @@ def bake(low, high, out_dir: str, stem: str, size: int, maps: list, extrusion: f
     for o in bpy.data.objects:
         o.select_set(o in (low, high))
     bpy.context.view_layer.objects.active = low
+    lo, hi = bounds([low])
+    dim = max((hi - lo).length, 1e-3)
+    ext = float(extrusion) if extrusion else dim * 0.04  # far enough to catch rounded/bevelled/subdivided detail
+    log(f"bake cage extrusion {ext:.4f} m")
     tex_nodes = {}
     for m, img in images.items():
         node = nt.nodes.new("ShaderNodeTexImage")
@@ -544,7 +577,8 @@ def bake(low, high, out_dir: str, stem: str, size: int, maps: list, extrusion: f
             n.select = False
         tex_nodes[m].select = True
         nt.nodes.active = tex_nodes[m]
-        kwargs = {"use_selected_to_active": True, "margin": 8, "cage_extrusion": extrusion}
+        # max_ray_distance 0 = no limit: subdivided/organic detail can sit well inside the game mesh
+        kwargs = {"use_selected_to_active": True, "margin": 8, "cage_extrusion": ext, "max_ray_distance": 0.0}
         if m == "normal":
             bpy.ops.object.bake(type="NORMAL", normal_space="TANGENT", **kwargs)
         elif m == "ao":
@@ -611,6 +645,11 @@ def op_process(p: dict) -> dict:
     obj = join(objs) if p.get("join", True) else objs[0]
     before = mesh_stats([obj])
     applied = do_ops(obj, p.get("ops", []))
+    geometry = {"bevel", "boolean", "subdivide", "remesh", "decimate", "solidify", "mirror", "array", "displace", "weld"}
+    uv_mode = p.get("uv", "auto")
+    if uv_mode == "unwrap" or (uv_mode == "auto" and geometry & set(applied)):
+        smart_uv(obj)  # old UVs don't fit the new geometry (bevel/boolean faces get zero-area UVs)
+        applied.append("uv_unwrap")
     after = mesh_stats([obj])
     files = [export([obj], os.path.join(p["out_dir"], f"{p['stem']}.{fmt}"), fmt) for fmt in p.get("formats", ["glb"])]
     out = {"before": before, "after": after, "applied": applied, "files": files}
@@ -646,7 +685,7 @@ def op_bake(p: dict) -> dict:
         do_ops(high, p["material_ops"])
     # always unwrap fresh: CIE/box UVs may overlap, which ruins a bake
     smart_uv(low)
-    maps = bake(low, high, p["out_dir"], p["stem"], int(p.get("size", 1024)), p.get("maps", ["normal", "ao", "color"]), float(p.get("extrusion", 0.02)))
+    maps = bake(low, high, p["out_dir"], p["stem"], int(p.get("size", 1024)), p.get("maps", ["normal", "ao", "color"]), p.get("extrusion"))
     bpy.data.objects.remove(high, do_unlink=True)
     files = [export([low], os.path.join(p["out_dir"], f"{p['stem']}.{fmt}"), fmt) for fmt in p.get("formats", ["glb"])]
     out = {"maps": maps, "files": files, "stats": mesh_stats([low])}

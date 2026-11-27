@@ -33,7 +33,7 @@ JOB_SCRIPT = Path(__file__).with_name("blender_job.py")
 ENGINES = ("eevee", "cycles", "workbench")
 VIEW_PRESETS = {
     "hero": [{"name": "hero", "yaw": 35, "pitch": 18}],
-    "turntable": [{"name": f"turn{a:03d}", "yaw": a, "pitch": 12} for a in (0, 90, 180, 270)],
+    "turntable": [{"name": f"turn{a:03d}", "yaw": a, "pitch": 18} for a in (30, 120, 210, 300)],
     "sheet": [{"name": "three_quarter", "yaw": 35, "pitch": 18}, {"name": "front", "yaw": 0, "pitch": 5},
               {"name": "side", "yaw": 90, "pitch": 5}, {"name": "back", "yaw": 200, "pitch": 15}],
     "portrait": [{"name": "portrait", "yaw": 20, "pitch": 5, "lens": 85}, {"name": "profile", "yaw": 90, "pitch": 0, "lens": 85}],
@@ -202,6 +202,8 @@ def _finish(name: str, result: dict[str, Any], title: str, extra: dict[str, Any]
     for m_name, f in (data.get("maps") or {}).items():
         with Image.open(f) as im:
             panels.append((f"baked {m_name}", im.convert("RGBA").copy()))
+    if data.get("maps") and glb:
+        issues += bake_checks(M.load(glb), data["maps"])
     lines = []
     if data.get("before") and data.get("after"):
         lines.append(f"Blender: {data['before']['triangles']} -> {data['after']['triangles']} triangles; ops {', '.join(data.get('applied', [])) or 'none'}")
@@ -217,6 +219,41 @@ def _finish(name: str, result: dict[str, Any], title: str, extra: dict[str, Any]
     return info
 
 
+def bake_checks(m: Any, maps: dict[str, str]) -> list[dict[str, Any]]:
+    """Look at the baked textures, not just the mesh: black holes where rays missed the detailed
+    model, and how much of the texture is actually used."""
+    import numpy as np
+    from PIL import Image
+
+    from .mesh3d import uv_coverage_mask
+    out: list[dict[str, Any]] = []
+    if m.UV is None:
+        return [{"severity": "error", "message": "The baked model has no UVs, so the maps can't be applied."}]
+    # AO is skipped: black AO is real occlusion (hidden faces between parts), not a missed ray.
+    for name in ("color", "normal"):
+        if name not in maps:
+            continue
+        with Image.open(maps[name]) as im:
+            px = np.asarray(im.convert("RGB"), dtype=np.int32)
+        mask = uv_coverage_mask(m, px.shape[1], px.shape[0])
+        if not mask.any():
+            continue
+        if name == "normal":
+            bad = (np.abs(px[..., 0] - 128) < 6) & (np.abs(px[..., 1] - 128) < 6) & (px[..., 2] < 40)
+        else:
+            bad = px.max(axis=2) < 6
+        frac = float((bad & mask).sum() / mask.sum())
+        if frac > 0.02:
+            out.append({"severity": "error" if frac > 0.1 else "warn",
+                        "message": f"{frac:.0%} of the baked {name} map is empty where rays missed the detailed model. "
+                                   "Raise 'extrusion', or don't subdivide hard-surface models (subdivision shrinks boxes)."})
+        if name == "color":
+            used = float(mask.mean())
+            if used < 0.25:
+                out.append({"severity": "warn", "message": f"UV islands use only {used:.0%} of the texture; detail per pixel is low."})
+    return out
+
+
 def process(args: dict[str, Any]) -> dict[str, Any]:
     from .studio import resolve_input, safe_name
     src = resolve_input(args["source"])
@@ -229,7 +266,10 @@ def process(args: dict[str, Any]) -> dict[str, Any]:
     if "glb" not in formats and "obj" not in formats:
         formats.insert(0, "glb")  # CIE checks the GLB
     name = safe_name(args.get("name") or src.stem + "_blender")
-    params = {"input": str(src), "ops": ops, "formats": formats, "stem": name, "render": _render_params(args)}
+    uv = args.get("uv", "auto")
+    if uv not in ("auto", "keep", "unwrap"):
+        raise ValueError("uv must be auto, keep or unwrap.")
+    params = {"input": str(src), "ops": ops, "formats": formats, "stem": name, "render": _render_params(args), "uv": uv}
     res = run_job("process", params, timeout=int(args.get("timeout", 900)))
     return _finish(name, res, f"Blender: {name}", {"ops": [o["op"] for o in ops]})
 
@@ -249,7 +289,7 @@ def bake(args: dict[str, Any]) -> dict[str, Any]:
     from .studio import resolve_input, safe_name
     low = resolve_input(args["source"])
     params: dict[str, Any] = {"low": str(low), "size": max(128, min(int(args.get("size", 1024)), 4096)),
-                              "maps": args.get("maps") or ["normal", "ao", "color"], "extrusion": float(args.get("extrusion", 0.02)),
+                              "maps": args.get("maps") or ["normal", "ao", "color"], "extrusion": float(args["extrusion"]) if args.get("extrusion") else None,
                               "formats": [f.lower() for f in (args.get("formats") or ["glb"])]}
     for m in params["maps"]:
         if m not in ("normal", "ao", "color", "roughness"):
@@ -296,6 +336,7 @@ def register_capabilities(reg: Any) -> None:
                 "subdivision, smooth, decimate, solidify, mirror, array, noise displacement, procedural materials. Exports GLB/FBX/OBJ/.blend, "
                 "renders with Eevee, and checks the result.",
         input_schema={"source": "str", "ops": f"list[dict]: ops {', '.join(OPS)}", "formats": "optional list[str]", "name": "optional str",
+                      "uv": "optional str (auto: re-unwrap after geometry changes | keep | unwrap)",
                       "render": "optional bool", "engine": "optional str (eevee|cycles|workbench)", "views": view_doc,
                       "size": "optional int", "samples": "optional int", "timeout": "optional int"},
         permission="read", handler=wrap(process, "Blender processed the model."), tags=["blender", "3d", "boolean", "bevel", "realistic"]))

@@ -43,7 +43,9 @@ def main() -> int:
         entry = {"status": res["status"], "summary": str(res.get("summary"))[:600], "seconds": round(time.time() - t0, 1),
                  "verdict": data.get("verdict") if isinstance(data, dict) else None}
         if isinstance(data, dict):
-            for k in ("version", "path", "engines", "gltf", "fbx", "stats", "log", "issues", "status", "steps"):
+            if res["status"] == "ok" and data.get("status") in ("failed", "rolled_back"):
+                entry["status"] = data["status"]
+            for k in ("version", "path", "engines", "gltf", "fbx", "stats", "log", "issues", "steps"):
                 if k in data:
                     entry[k] = data[k]
             prev = data.get("preview")
@@ -56,7 +58,10 @@ def main() -> int:
 
     st = step("status", "blender.status", {"refresh": True})
     if not st.get("available"):
-        print("Blender was not found; nothing else to test.")
+        print("\nBlender was NOT found, so nothing was tested (this is not a pass).")
+        print(st.get("message", ""))
+        (OUT / "summary.json").write_text(json.dumps(summary, indent=1, default=str), encoding="utf-8")
+        return 2
     else:
         crate = step("crate", "mesh.generate", {"kind": "crate", "params": {"seed": 1}})
         src = crate["files"][0]
@@ -67,13 +72,18 @@ def main() -> int:
         step("cycles", "blender.render", {"source": src, "name": "smoke_turntable", "engine": "cycles", "views": "turntable",
                                          "size": 256, "samples": 16})
         step("bake", "blender.bake", {"source": src, "name": "smoke_baked", "size": 512, "maps": ["normal", "ao", "color"],
-                                     "high_ops": [{"op": "bevel", "width": 0.015, "segments": 3}, {"op": "subdivide", "levels": 1}],
+                                     "high_ops": [{"op": "bevel", "width": 0.015, "segments": 3}, {"op": "shade_smooth", "angle": 35}],
                                      "render_size": 384})
         barrel = step("barrel", "mesh.generate", {"kind": "barrel"})
+        # organic detail: subdivide + noise on a rock, baked back onto the low-poly rock
+        rock = step("rock", "mesh.generate", {"kind": "rock", "params": {"seed": 3}})
+        step("rock_bake", "blender.bake", {"source": rock["files"][0], "name": "smoke_rock", "size": 512, "maps": ["normal", "ao", "color"],
+                                          "high_ops": [{"op": "subdivide", "levels": 2}, {"op": "displace", "strength": 0.04, "scale": 0.15}],
+                                          "material_ops": [{"op": "material", "preset": "stone"}], "render_size": 384})
         step("polish", "flow.run", {"workflow": "blender_polish", "inputs": {"source": barrel["files"][0], "material": "wood",
                                                                             "texture_size": 512}})
     (OUT / "summary.json").write_text(json.dumps(summary, indent=1, default=str), encoding="utf-8")
-    bad = [k for k, v in summary.items() if v["status"] not in ("ok",)]
+    bad = [k for k, v in summary.items() if v["status"] != "ok" or v.get("verdict") == "fail"]
     print("\nAll Blender steps passed." if not bad else f"\nProblems in: {', '.join(bad)} (details in blender_smoke_out/summary.json)")
     return 0 if not bad else 1
 

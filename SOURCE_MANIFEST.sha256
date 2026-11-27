@@ -24,8 +24,8 @@ bf01f1625ad67ba23435f34c6622ef9716c4f0d4c81ab58c6d2312f398e3b270  ./cie/__init__
 072d84bd753074e6852bb3d27c7b092a1ad8ef7966c30fd7c3a747095a350a90  ./cie/__main__.py
 40936c21380526c710989f5d926e23cc9aa5846502c2a1694cebd90f7f423f2d  ./cie/art.py
 cbc44af4241c4b8e31e6a4705c3d119dbd9761b241261740752b8e35b03dceaf  ./cie/audio.py
-47aac6fed8523186b3f1c18cbfd370ea7a0b2f748da4f38dd6afe9a4599cda5c  ./cie/blender.py
-5f7b613c0f4576516b66d7b6a8569fa97a2be7206a1738894bad845ea04addb6  ./cie/blender_job.py
+600155969d81b21db5077df101d026453d0c72860ef5f1a59baff704f7b4ccee  ./cie/blender.py
+5f33f8c6f2b413bc0effc841faaccd7ab4da8592ff72bb529c1ba223a8d58468  ./cie/blender_job.py
 35f645611b134e4bef82036daadd27993e9e57e1926304719934277a7b919d69  ./cie/codeintel.py
 a9c8cfa72abdeb43e2c85870eb885f560a839ce5360461b61cd24bced4057d59  ./cie/codescan.py
 79bad713bafe1c4a27442aadf813a207d7f0a85acfd0d7106615fb9c4c5927e1  ./cie/coding.py
@@ -40,7 +40,7 @@ b30c1fc4fa7e89f0f4222db09bf8f75e258800e93abd7373a5d61c0e15d3b18d  ./cie/game.py
 12a2279ec69a3acfd1cb8a75e5250bb4934465cdda5910e1d4d9e235047d95f4  ./cie/jobs.py
 1aefcb40d6a57879b1a27a949023268cb577894b040a529f19dbe126c3ba8855  ./cie/knowledge.py
 f973202d0fc7a662d0b8c1ced8b6f9c939cbae521938e9674e8abfc7033ef8fe  ./cie/lowpoly.py
-7b932e85768e89460944a75077dae3dec9eb6073ea1f4e28877e78adedd54b37  ./cie/mesh3d.py
+bdb4cee56a836197e8c822680218e142df3c95b9113b3179c73caf683513e3d3  ./cie/mesh3d.py
 15aeed4f6d851462e5606f7f603dca471e0203441204e5ad2edc15e1b4a77635  ./cie/models.py
 3d4974a1890639bfadd4a4190df331ef6a565b8ac2d7cd542074a029de60cfa5  ./cie/orchestrate.py
 fc88c968ffaae07392801459bcdedb862d3fa5f1b71f695331f46b51e2039348  ./cie/pixel.py
@@ -67,7 +67,7 @@ da2482689d2a54af4a829c69646424ae9001d097e410073b16f6eed8277c6cad  ./docs/RESEARC
 6cbc5837064b23d0827b9516ccf27a92af4002e8c00b5fd2312d9041b75c7f25  ./pyproject.toml
 136c618735f8d16cd2ba54f2fe130ba0fc9c3c4c9cebc65aa52ca93dac4aabcd  ./requirements.txt
 d022da9de34e0e5efa44d72c33ac79bc5f3f983b7c23e2b914c981123971ce15  ./sbom.json
-4f8dad497405681a0aeaacb321c9e6bcf05f3c41cd9da17b659cfb65ec96ed0d  ./scripts/blender_smoke.py
+60c2c1dcedb750114a1ac36b601c6826c8911b340fbcdde1a18aa729b1f8f7f6  ./scripts/blender_smoke.py
 ab272a251f8e3f074a34944f97f3a6a3bba876cf3d11bd70879b352ecd4a2768  ./scripts/build_standalone.py
 dcfbcefc80f5b2204c4fbde0151b6c56d2bbb9649a876b141c2a2d3561f9c68f  ./scripts/build_wheelhouse.py
 40a5aad4ffdd51dd9b55d61f5f76011e5b8f3e58721d1ec4faa7e0467e74d8e1  ./scripts/check_dependency_policy.py
@@ -90,5 +90,5 @@ cfd322f98fa1c8ed33b8254e2e3ad74d083fb3f224fc1f2689667e80b873ee43  ./tests/test_p
 dc3a0c8590ab0b6fa543c4adf344aa83a9de634899f2a8097c6bb945f9cda26f  ./tests/test_phase2_devtools.py
 b28cc3c858ab07210225b4b48f13b8f47e5bc1ff8698c73dbfe296802a1198c8  ./tests/test_phase2_review.py
 4eced21d2b32267c70d66cb793c9c53d89724b0dcb30b507f6f757e722730519  ./tests/test_phase3_studio.py
-af66d0af7cbd57207bab78d2b890a42bfb7b71883cea2e3c1547c809507c90a7  ./tests/test_phase4_flows_blender.py
+3f8cf25bd2b674c19e4b45f610a5696d1b34d579bb06362d75b9b14e86d7a54f  ./tests/test_phase4_flows_blender.py
 038db4ca60b7f8a22e02d15a3fcaa3e8baa254d314681d91c84d19afc2bd3df5  ./tests/test_security_and_acceptance.py
