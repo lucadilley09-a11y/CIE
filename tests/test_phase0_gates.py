@@ -15,6 +15,7 @@ from scripts.build_wheelhouse import (
     wheel_metadata, wheel_contents_inventory, prepare_output_directory,
     read_exact_requirements, verify_build_system,
 )
+from scripts.build_standalone import write_runtime_sbom
 from scripts.check_dependency_policy import (
     collect_dependency_tree, canonical_name, contains_forbidden_license,
     direct_dependency_registry_issues, conditional_transitive_dependency_issues,
@@ -384,3 +385,46 @@ def test_build_system_verification_fails_on_version_mismatch(
     )
     with pytest.raises(RuntimeError, match="does not match build-system-requirements"):
         verify_build_system({"setuptools": "84.2.1"}, "target-python")
+
+
+def test_standalone_sbom_includes_runtime_and_embedded_native_components(tmp_path: Path) -> None:
+    notice = tmp_path / "THIRD_PARTY_LICENSES" / "numpy" / "LICENSE.txt"
+    notice.parent.mkdir(parents=True)
+    notice.write_text(
+        "Name: OpenBLAS\n"
+        "Files: numpy.libs/libscipy_openblas*.dll\n"
+        "Description: bundled as a dynamically linked library\n"
+        "Availability: https://github.com/OpenMathLib/OpenBLAS/\n"
+        "License: BSD-3-Clause\n",
+        encoding="utf-8",
+    )
+    manifest = {
+        "project": "creative-intelligence-engine",
+        "distributions": [
+            {
+                "name": "numpy",
+                "version": "2.2.3",
+                "license": "BSD-3-Clause",
+                "license_files": [{"path": "THIRD_PARTY_LICENSES/numpy/LICENSE.txt"}],
+            },
+            {
+                "name": "certifi",
+                "version": "2026.11.20",
+                "license": "MPL-2.0",
+                "license_files": [],
+            },
+        ],
+    }
+    sbom = write_runtime_sbom(tmp_path, manifest)
+    components = {item["name"]: item for item in sbom["components"]}
+    assert set(components) == {"numpy", "certifi", "OpenBLAS"}
+    assert components["certifi"]["version"] == "2026.11.20"
+    assert components["OpenBLAS"]["licenses"][0]["license"]["name"] == "BSD-3-Clause"
+    assert sbom["metadata"]["component"]["properties"][0]["value"].startswith("generated-from-actual")
+    dependency_map = {item["ref"]: item["dependsOn"] for item in sbom["dependencies"]}
+    assert "pkg:pypi/numpy@2.2.3" in dependency_map
+    assert dependency_map["pkg:pypi/numpy@2.2.3"] == [
+        "urn:cie:embedded:openblas:BSD-3-Clause"
+    ]
+    saved = json.loads((tmp_path / "sbom.json").read_text(encoding="utf-8"))
+    assert saved == sbom
