@@ -79,8 +79,11 @@ def import_file(path: str) -> list:
     return meshes
 
 
-def bake_transforms(objs: list) -> None:
-    """Apply parent and object transforms into the mesh data (glTF imports often have scaled parents)."""
+def bake_transforms(objs: list, weld: bool = True) -> None:
+    """Apply parent and object transforms into the mesh data (glTF imports often have scaled parents),
+    then join corners that sit on the same spot. CIE (and many exporters) store each triangle with its
+    own corners; until they're joined, smoothing, bevels and bakes treat every triangle as separate."""
+    import bmesh  # type: ignore[import-not-found]
     for o in objs:
         mw = o.matrix_world.copy()
         o.parent = None
@@ -88,6 +91,22 @@ def bake_transforms(objs: list) -> None:
             o.data = o.data.copy()
         o.data.transform(mw)
         o.matrix_world = Matrix.Identity(4)
+        if weld:
+            bm = bmesh.new()
+            bm.from_mesh(o.data)
+            before = len(bm.verts)
+            bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
+            after = len(bm.verts)
+            bm.to_mesh(o.data)
+            bm.free()
+            o.data.update()
+            if after < before:
+                log(f"joined {before - after} duplicate corners on {o.name}")
+            # Imported files carry fixed per-corner normals that override any smoothing we do later.
+            if getattr(o.data, "has_custom_normals", False):
+                with bpy.context.temp_override(object=o, active_object=o, selected_objects=[o], selected_editable_objects=[o]):
+                    bpy.ops.mesh.customdata_custom_splitnormals_clear()
+                log(f"cleared imported custom normals on {o.name}")
 
 
 def join(objs: list):
