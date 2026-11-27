@@ -25,7 +25,8 @@ jobs:
       - name: Collect vulnerability, license, and dependency evidence
         run: |
           mkdir -p dependency-audit
-          python -m pip_audit --strict --skip-editable --format=json > dependency-audit/pip-audit.json
+          python -m pip freeze --exclude-editable > dependency-audit/requirements-audit.txt
+          python -m pip_audit --strict -r dependency-audit/requirements-audit.txt --format=json > dependency-audit/pip-audit.json
           pip-licenses --format=json > dependency-audit/all-installed-licenses.json
           pipdeptree --json-tree > dependency-audit/all-installed-dependency-tree.json
           pipdeptree --warn fail --json-tree > dependency-audit/dependency-tree.json
