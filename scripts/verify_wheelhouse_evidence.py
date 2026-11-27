@@ -169,9 +169,13 @@ def verify_platform_wheelhouses(
             license_meta = contents.get("license_metadata") or {}
             license_files = contents.get("license_files") or []
             native = contents.get("native_binaries") or []
-            raw_license = str(license_meta.get("license_expression") or license_meta.get("license") or "").strip()
-            if not raw_license and license_meta.get("classifiers"):
-                raw_license = str(license_meta["classifiers"][0]).split(" :: ")[-1]
+            # Classifiers provide the concise SPDX-like category when the legacy
+            # License field contains an entire bundled license document.
+            raw_license = ""
+            if license_meta.get("classifiers"):
+                raw_license = str(license_meta["classifiers"][0]).split(" :: ")[-1].strip()
+            if not raw_license:
+                raw_license = str(license_meta.get("license_expression") or license_meta.get("license") or "").strip()
             normalized_license = aliases.get(raw_license.lower(), raw_license)
             if not normalized_license:
                 raise RuntimeError(f"No license metadata recorded for {name}=={version} ({system})")
@@ -191,6 +195,20 @@ def verify_platform_wheelhouses(
                 raise RuntimeError(
                     f"Native wheel {name}=={version} has no bundled license/notice file ({system})"
                 )
+            embedded_components = contents.get("embedded_components") or []
+            for component in embedded_components:
+                component_key = canonical_name(str(component.get("name") or ""))
+                component_license = str(component.get("license") or "")
+                registry_component = registry.get(component_key)
+                if registry_component is None:
+                    raise RuntimeError(
+                        f"Embedded component {component.get('name')} from {name} is missing from deps/registry.yaml"
+                    )
+                if str(registry_component.get("license") or "") != component_license:
+                    raise RuntimeError(
+                        f"Embedded component {component.get('name')} license differs from deps/registry.yaml: "
+                        f"{component_license}"
+                    )
             verified_entries.append({
                 "name": str(name), "version": version, "filename": filename,
                 "sha256": actual_hash, "license_metadata": license_meta,
@@ -200,6 +218,7 @@ def verify_platform_wheelhouses(
                     if normalized_license in conditional_licenses else None
                 ),
                 "license_files": license_files, "native_binaries": native,
+                "embedded_components": embedded_components,
                 "pypi": pypi,
             })
             all_wheels[(system, key, version)] = {
@@ -211,6 +230,7 @@ def verify_platform_wheelhouses(
                     if normalized_license in conditional_licenses else None
                 ),
                 "license_files": license_files, "native_binaries": native,
+                "embedded_components": embedded_components,
                 "pypi": pypi,
             }
 
