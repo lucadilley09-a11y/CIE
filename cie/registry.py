@@ -171,6 +171,22 @@ class CapabilityRegistry:
                 elapsed_ms=(time.perf_counter() - t0) * 1000.0,
             )
 
+        auto_snap: dict[str, Any] | None = None
+        try:
+            from .snapstore import auto_snapshot_for
+
+            auto_snap = auto_snapshot_for(capability_id, spec.permission, args)
+        except Exception as exc:  # noqa: BLE001 - never write without the safety net
+            return make_envelope(
+                status="error",
+                capability=capability_id,
+                summary=redact_secrets(
+                    f"Automatic snapshot failed, so the change was not made: {exc}. "
+                    "Fix the cause, or set storage.auto_snapshot to false in CIE's config."
+                ),
+                elapsed_ms=(time.perf_counter() - t0) * 1000.0,
+            )
+
         try:
             res = spec.handler(args)
             elapsed_ms = (time.perf_counter() - t0) * 1000.0
@@ -178,6 +194,12 @@ class CapabilityRegistry:
             summary = redact_secrets(str(res.get("summary", f"Completed {capability_id}")))
             data = redact_value(res.get("data", {}))
             evidence = redact_value(res.get("evidence", []))
+            if auto_snap:
+                evidence = list(evidence) + [{
+                    "auto_snapshot": auto_snap["snapshot_id"],
+                    "files": auto_snap["files_saved"] + auto_snap["files_absent"],
+                    "undo": f"storage.restore_preview then storage.restore with snapshot_id {auto_snap['snapshot_id']}",
+                }]
             artifacts = redact_value(res.get("artifacts", []))
             warnings = redact_value(res.get("warnings", []))
             cache_meta = res.get("cache", {"hit": False})
@@ -296,6 +318,16 @@ def register_all_capabilities(reg: CapabilityRegistry) -> None:
     creative.register_capabilities(reg)
     from . import projects
     projects.register_capabilities(reg)
+    from . import snapstore
+    snapstore.register_capabilities(reg)
+    from . import knowledge
+    knowledge.register_capabilities(reg)
+    from . import orchestrate
+    orchestrate.register_capabilities(reg)
+    from . import routing
+    routing.register_capabilities(reg)
+    from . import templates
+    templates.register_capabilities(reg)
 
     def _batch_handler(args: dict[str, Any]) -> dict[str, Any]:
         ops = args.get("operations") or []

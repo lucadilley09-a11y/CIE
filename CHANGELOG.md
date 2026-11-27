@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.3.2.dev0: Phase 1 core and storage (2026-11-27)
+
+See `PHASE1_PROGRESS.md` for the full report.
+
+- **Storage (1.3):** deduplicated, losslessly compressed snapshot store; automatic snapshot before every write/exec capability; preview-first restore with a safety snapshot; 30-day retention keeping named snapshots; 5 GB warning; usage, duplicate, compare, lossless PNG, and archive capabilities. Legacy snapshots still restore.
+- **Knowledge (1.4):** asset metadata (images, WAV, OBJ/glTF/GLB/STL) in the unified index (index version 3); background re-indexer in the CIE server; decisions, issues, and architecture notes as vault notes; `knowledge.summary`.
+- **Orchestration (1.1):** `orchestrate.plan` and `orchestrate.run` (parallel reads, gated changes, retries, reuse, step references).
+- **Routing (1.2):** `routing.recommend` picks a free built-in method, an installed local model, or a Claude model (Haiku/Sonnet/Opus/Fable) and effort level (low to max) per task, and whether to run it on a helper. Five modes, plus config overrides.
+- **Templates (1.5):** 11 validated built-in templates, including a Hearth-ready browser game; user templates with provenance.
+- **Fixes:** storage initialization race; `models/` folders no longer excluded; issue status tags now replace; user-visible note/template writes are approval-gated.
+
 ## 2.3.2.dev0 — Phase 0.2/0.3 update (2026-11-27)
 
 ### Project registration (Phase 0.2)

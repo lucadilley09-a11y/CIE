@@ -13,55 +13,26 @@ from .storage import get_storage, sha256_bytes
 
 
 def create_snapshot(paths: list[str], description: str = "Pre-change snapshot", project_id: str = "default") -> dict[str, Any]:
-    vault = get_vault_root()
-    snap_id = f"snap_{uuid.uuid4().hex[:10]}"
-    blob_dir = vault / ".cie" / "snapshots" / snap_id
-    blob_dir.mkdir(parents=True, exist_ok=True)
-    manifest: list[dict[str, str]] = []
+    """Backward-compatible wrapper over the Phase 1.3 deduplicated store."""
+    from .snapstore import create_snapshot as _create
 
-    for idx, raw_p in enumerate(paths):
-        resolved, root = resolve_in_projects(raw_p)
-        if not resolved.exists() or not resolved.is_file():
-            continue
-        data = resolved.read_bytes()
-        h = sha256_bytes(data)
-        blob_path = blob_dir / f"{idx}_{h[:12]}.bin"
-        blob_path.write_bytes(data)
-        manifest.append({
-            "original_path": str(resolved),
-            "project_id": root["id"],
-            "sha256": h,
-            "blob_path": str(blob_path),
-        })
-
-    get_storage().execute(
-        "INSERT INTO snapshots(snapshot_id, project_id, description, manifest_json, created_at) VALUES (?, ?, ?, ?, ?)",
-        (snap_id, project_id, description, json.dumps(manifest), utc_now()),
-    )
-    return {"snapshot_id": snap_id, "files_saved": len(manifest), "description": description}
+    return _create(paths=paths, description=description, kind="manual")
 
 
 def restore_snapshot(snapshot_id: str) -> dict[str, Any]:
-    rows = get_storage().query("SELECT manifest_json FROM snapshots WHERE snapshot_id = ?", (snapshot_id,))
-    if not rows:
-        raise FileNotFoundError(f"Snapshot '{snapshot_id}' not found.")
-    manifest = json.loads(rows[0]["manifest_json"])
-    restored: list[str] = []
-    for item in manifest:
-        orig, _ = resolve_in_projects(item["original_path"])
-        blob = Path(item["blob_path"])
-        if blob.exists():
-            orig.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(blob, orig)
-            restored.append(str(orig))
-    return {"snapshot_id": snapshot_id, "restored_files": restored, "count": len(restored)}
+    """Backward-compatible wrapper: preview-checked restore with a safety snapshot."""
+    from .snapstore import restore_snapshot as _restore
+
+    result = _restore(snapshot_id)
+    if "restored_files" not in result:
+        result["count"] = result.get("restored", 0)
+    return result
 
 
 def list_snapshots(limit: int = 20) -> list[dict[str, Any]]:
-    return get_storage().query(
-        "SELECT snapshot_id, project_id, description, created_at FROM snapshots ORDER BY created_at DESC LIMIT ?",
-        (limit,),
-    )
+    from .snapstore import list_snapshots as _list
+
+    return _list(limit=limit)["snapshots"]
 
 
 def run_workflow(steps: list[dict[str, Any]], approved: bool = False) -> dict[str, Any]:

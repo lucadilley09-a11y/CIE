@@ -194,6 +194,7 @@ def _purge_index(project_id: str) -> int:
             ("symbols_index", "project_id"),
             ("dependencies_index", "project_id"),
             ("index_meta", "project_id"),
+            ("asset_meta", "project_id"),
             ("files_index", "project_id"),
         ):
             cur = conn.execute(f"DELETE FROM {table} WHERE {col} = ?", (project_id,))  # noqa: S608 - fixed table names

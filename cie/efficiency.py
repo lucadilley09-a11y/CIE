@@ -51,7 +51,7 @@ CODE_LANGS = {
 }
 
 # Bump when the indexer extracts new kinds of data; triggers one full re-index.
-INDEX_VERSION = 2
+INDEX_VERSION = 3  # 3: asset metadata (Phase 1.4)
 
 TEXT_EXTS = set(LANG_MAP.keys()) | {".txt", ".ini", ".cfg", ".xml", ".html", ".css", ".sql", ".sh", ".bat", ".ps1"}
 
@@ -65,6 +65,7 @@ def incremental_index(project_id: str = "") -> dict[str, Any]:
     dependencies. Re-indexes only changed files and removes deleted ones.
     A project indexed by an older INDEX_VERSION gets one full re-index."""
     from .coding import extract_dependencies, extract_symbols
+    from .knowledge import ASSET_EXTS, extract_asset_meta, write_asset_meta
 
     cfg = load_config()
     roots = project_roots(cfg)
@@ -94,6 +95,11 @@ def incremental_index(project_id: str = "") -> dict[str, Any]:
         existing = {r["path"]: r for r in existing_rows}
         seen_paths: set[str] = set()
         files = iter_project_files(root)
+        # OBJ models share the ".obj" extension with compiled object files,
+        # which the default file filter skips; index them as assets.
+        known = {os.path.normcase(str(f)) for f in files}
+        files += [f for f in iter_project_files(root, extensions={".obj"}, include_binary=True)
+                  if os.path.normcase(str(f)) not in known]
 
         def _tx(conn: Any) -> None:
             nonlocal indexed, skipped, removed, symbols_written, deps_written
@@ -147,6 +153,8 @@ def incremental_index(project_id: str = "") -> dict[str, Any]:
                 conn.execute("DELETE FROM files_fts WHERE file_path = ?", (sp,))
                 conn.execute("DELETE FROM symbols_index WHERE file_path = ?", (sp,))
                 conn.execute("DELETE FROM dependencies_index WHERE source_file = ?", (sp,))
+                if fpath.suffix.lower() in ASSET_EXTS:
+                    write_asset_meta(conn, sp, pid, extract_asset_meta(fpath))
                 if content:
                     conn.execute(
                         "INSERT INTO files_fts(file_path, project_id, content) VALUES (?, ?, ?)",
@@ -175,6 +183,7 @@ def incremental_index(project_id: str = "") -> dict[str, Any]:
                 conn.execute("DELETE FROM files_fts WHERE file_path = ?", (old_path,))
                 conn.execute("DELETE FROM symbols_index WHERE file_path = ?", (old_path,))
                 conn.execute("DELETE FROM dependencies_index WHERE source_file = ?", (old_path,))
+                conn.execute("DELETE FROM asset_meta WHERE path = ?", (old_path,))
                 removed += 1
             # Rows left by an earlier, unscoped writer for this project.
             conn.execute(

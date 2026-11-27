@@ -127,6 +127,40 @@ CREATE TABLE IF NOT EXISTS benchmarks (
 
 CREATE INDEX IF NOT EXISTS idx_deps_project ON dependencies_index(project_id);
 
+-- Content-addressed blob store (Phase 1.3). Each unique file content is
+-- stored once under CIE_HOME/store/blobs, losslessly compressed when that helps.
+CREATE TABLE IF NOT EXISTS blobs (
+    sha256 TEXT PRIMARY KEY,
+    size INTEGER NOT NULL,
+    stored_size INTEGER NOT NULL,
+    codec TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+
+-- One row per file per snapshot. existed = 0 records "this file did not
+-- exist yet", so a restore can remove files created after the snapshot.
+CREATE TABLE IF NOT EXISTS snapshot_files (
+    snapshot_id TEXT NOT NULL,
+    path TEXT NOT NULL,
+    sha256 TEXT,
+    size INTEGER NOT NULL DEFAULT 0,
+    mtime_ns INTEGER NOT NULL DEFAULT 0,
+    existed INTEGER NOT NULL DEFAULT 1,
+    PRIMARY KEY (snapshot_id, path)
+);
+CREATE INDEX IF NOT EXISTS idx_snapfiles_path ON snapshot_files(path);
+CREATE INDEX IF NOT EXISTS idx_snapfiles_sha ON snapshot_files(sha256);
+
+-- Phase 1.4 asset metadata, written by the unified indexer.
+CREATE TABLE IF NOT EXISTS asset_meta (
+    path TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    meta_json TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_assets_project ON asset_meta(project_id, kind);
+
 -- Per-project index schema version. When CIE's indexer changes what it
 -- extracts, bumping INDEX_VERSION forces one full re-index (safe migration).
 CREATE TABLE IF NOT EXISTS index_meta (
@@ -169,9 +203,34 @@ class StorageManager:
             conn = self._connect()
             try:
                 conn.executescript(SCHEMA_SQL)
+                self._migrate(conn)
                 conn.commit()
             finally:
                 conn.close()
+
+    @staticmethod
+    def _migrate(conn: sqlite3.Connection) -> None:
+        """Add columns introduced after a table was first created (safe, idempotent)."""
+        wanted = {
+            "snapshots": [
+                ("name", "TEXT NOT NULL DEFAULT ''"),
+                ("kind", "TEXT NOT NULL DEFAULT 'manual'"),
+                ("pinned", "INTEGER NOT NULL DEFAULT 0"),
+                ("file_count", "INTEGER NOT NULL DEFAULT 0"),
+                ("logical_bytes", "INTEGER NOT NULL DEFAULT 0"),
+                ("scope", "TEXT NOT NULL DEFAULT 'paths'"),
+            ],
+        }
+        for table, cols in wanted.items():
+            have = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
+            for name, decl in cols:
+                if name not in have:
+                    try:
+                        conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {decl}")
+                    except sqlite3.OperationalError as exc:
+                        # Another process added it first (e.g. a second CIE window).
+                        if "duplicate column" not in str(exc).lower():
+                            raise
 
     def query(self, sql: str, params: tuple[Any, ...] = ()) -> list[dict[str, Any]]:
         conn = self._connect()
@@ -274,6 +333,7 @@ class StorageManager:
         symbols = self.query("SELECT COUNT(*) AS c FROM symbols_index")[0]["c"]
         deps = self.query("SELECT COUNT(*) AS c FROM dependencies_index")[0]["c"]
         notes = self.query("SELECT COUNT(*) AS c FROM notes_index")[0]["c"]
+        assets = self.query("SELECT COUNT(*) AS c FROM asset_meta")[0]["c"]
         per_project = self.query(
             """
             SELECT f.project_id AS project_id,
@@ -290,16 +350,25 @@ class StorageManager:
             "symbols_indexed": symbols,
             "dependencies_indexed": deps,
             "notes_indexed": notes,
+            "assets_indexed": assets,
             "projects": per_project,
         }
 
 
 _DEFAULT_STORAGE: StorageManager | None = None
+_STORAGE_INIT_LOCK = threading.Lock()
 
 
 def get_storage() -> StorageManager:
+    """Return the shared storage manager. Creation is locked so parallel
+    callers (orchestrate.run, the background indexer) share one manager and
+    one write lock instead of racing to initialize the database."""
     global _DEFAULT_STORAGE
     db_path = get_vault_root() / ".cie" / "index.sqlite"
-    if _DEFAULT_STORAGE is None or _DEFAULT_STORAGE.db_path != db_path:
-        _DEFAULT_STORAGE = StorageManager(db_path)
-    return _DEFAULT_STORAGE
+    current = _DEFAULT_STORAGE
+    if current is not None and current.db_path == db_path:
+        return current
+    with _STORAGE_INIT_LOCK:
+        if _DEFAULT_STORAGE is None or _DEFAULT_STORAGE.db_path != db_path:
+            _DEFAULT_STORAGE = StorageManager(db_path)
+        return _DEFAULT_STORAGE

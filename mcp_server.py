@@ -14,7 +14,14 @@ from cie.registry import get_registry
 
 
 def cie_discover(area: str = "", keyword: str = "", project: str = "") -> dict[str, Any]:
-    """Discover CIE capabilities by area, keyword, or project."""
+    """Discover CIE capabilities by area, keyword, or project.
+
+    Shortcuts: for a multi-step task, call cie_run("orchestrate.plan", {"task": ..., "project_id": ...})
+    to get a ready-made step list, then cie_run("orchestrate.run", {"steps": [...]}).
+    For project context, start with cie_run("knowledge.summary", {"project_id": ...}).
+    Before editing project files directly, call cie_run("storage.snapshot", {"paths": [...]}) so the
+    change can be undone with storage.restore_preview and storage.restore.
+    """
     caps = get_registry().discover(area=area, keyword=keyword, project=project)
     return {
         "status": "ok",
@@ -163,6 +170,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     @mcp.prompt()
     def audit_audio_asset() -> str:
         return PROMPT_TEMPLATES["audit_audio_asset"]
+
+    try:
+        from cie.knowledge import start_background_indexer
+
+        start_background_indexer()
+    except Exception as exc:  # noqa: BLE001 - the server must start even if indexing cannot
+        sys.stderr.write(f"CIE background indexer did not start: {exc}\n")
 
     mcp.run(transport="stdio")
 

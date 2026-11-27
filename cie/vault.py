@@ -147,6 +147,7 @@ def save_note(
     confidence: str = "observed",
     links: list[str] | None = None,
     rel_path: str | None = None,
+    replace_tags: bool = False,
 ) -> dict[str, Any]:
     vault = ensure_vault_layout()
     clean_body = redact_secrets(body)
@@ -173,7 +174,7 @@ def save_note(
         "created": existing_meta.get("created") or now,
         "updated": now,
         "project": project or existing_meta.get("project", ""),
-        "tags": sorted(set((existing_meta.get("tags") or []) + (tags or []))),
+        "tags": sorted(set(tags or [])) if replace_tags else sorted(set((existing_meta.get("tags") or []) + (tags or []))),
         "source_type": source_type,
         "source_path": source_path,
         "confidence": confidence,

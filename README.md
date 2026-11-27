@@ -67,6 +67,13 @@ On Windows, `build_windows.ps1` runs the same install, test, and packaging steps
 
 CIE Phase 0 remains open until direct and transitive package audits, CI evidence across Windows/Ubuntu/macOS, and native standalone-bundle build/smoke tests have recorded evidence. Wheelhouses and fully disconnected VM tests are optional under the online-first decision. The current locally verified results and known blockers are tracked in [`PHASE0_STATUS.md`](PHASE0_STATUS.md).
 
+## Phase 1 capabilities
+
+- **Undo anything:** CIE snapshots project files before every change it makes. `storage.restore_preview` shows what a rollback would do; `storage.restore` does it and keeps a safety snapshot.
+- **Project overview:** `knowledge.summary` gives languages, symbols, assets, open issues, and recent decisions in one call. `knowledge.assets` lists sprite sizes, audio lengths, and model triangle counts.
+- **Plans:** `orchestrate.plan` turns a plain request into CIE steps; `orchestrate.run` runs them.
+- **Templates:** `templates.list` shows ready-made starters, including a Hearth-ready browser game.
+
 ## Safety defaults
 
 CIE defaults to `assist` autonomy. Read operations can run without approval; writes, execution, and destructive operations are subject to the permission policy and explicit owner approval.

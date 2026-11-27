@@ -30,8 +30,11 @@ DEFAULT_EXCLUDES = [
     "out",
     ".cie",
     ".obsidian",
-    "models",
 ]
+# AI model weights are skipped by file type (DEFAULT_BINARY_EXTS and
+# MODEL_WEIGHT_EXTS), not by folder name, so a game's "models/" folder of 3D
+# assets is still indexed and snapshotted.
+MODEL_WEIGHT_EXTS = {".gguf", ".safetensors", ".pt", ".pth", ".onnx", ".ckpt", ".pb"}
 
 DEFAULT_BINARY_EXTS = {
     ".exe", ".dll", ".so", ".dylib", ".bin", ".obj", ".o", ".a", ".lib",
@@ -130,6 +133,17 @@ def default_config() -> dict[str, Any]:
         "context_budget_bytes": 24000,  # legacy compatibility
         "default_detail": "compact",
         "projects": [],
+        # Phase 1.3 storage policy (owner decisions 2026-11-27).
+        "storage": {
+            "auto_snapshot": True,
+            "retention_days": 30,
+            "limit_gb": 5.0,
+        },
+        # Phase 1.4: keep the index current while the CIE server runs.
+        "knowledge": {
+            "background_index": True,
+            "interval_sec": 60,
+        },
         "allowlisted_commands": {
             "pytest": ["python", "-m", "pytest"],
             "unittest": ["python", "-m", "unittest"],
