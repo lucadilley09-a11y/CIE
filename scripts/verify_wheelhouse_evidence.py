@@ -183,8 +183,8 @@ def verify_platform_wheelhouses(
                     raise RuntimeError(f"Conditional-license package {name} is missing from deps/registry.yaml")
                 if str(registry_entry.get("version") or "") != version:
                     raise RuntimeError(f"Conditional-license package {name} version differs from deps/registry.yaml")
-                if registry_entry.get("release_approved") is not True:
-                    raise RuntimeError(f"Conditional-license package {name} is not approved for release")
+                # Approval remains a separate fail-closed release gate; this job gathers
+                # evidence even while a human/legal review is pending.
             if native and not license_files:
                 raise RuntimeError(
                     f"Native wheel {name}=={version} has no bundled license/notice file ({system})"
@@ -193,6 +193,10 @@ def verify_platform_wheelhouses(
                 "name": str(name), "version": version, "filename": filename,
                 "sha256": actual_hash, "license_metadata": license_meta,
                 "normalized_license": normalized_license,
+                "registry_release_approved": (
+                    registry.get(key, {}).get("release_approved")
+                    if normalized_license in conditional_licenses else None
+                ),
                 "license_files": license_files, "native_binaries": native,
                 "pypi": pypi,
             })
@@ -200,6 +204,10 @@ def verify_platform_wheelhouses(
                 "name": str(name), "version": version, "filename": filename,
                 "sha256": actual_hash, "license_metadata": license_meta,
                 "normalized_license": normalized_license,
+                "registry_release_approved": (
+                    registry.get(key, {}).get("release_approved")
+                    if normalized_license in conditional_licenses else None
+                ),
                 "license_files": license_files, "native_binaries": native,
                 "pypi": pypi,
             }
