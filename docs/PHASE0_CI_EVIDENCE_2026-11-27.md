@@ -69,3 +69,39 @@ Follow-up workflow: https://github.com/lucadilley09-a11y/CIE/actions/runs/459561
 - These components and certifi==2026.11.20 (MPL-2.0) are registered as conditional/native release-review items. Their approvals remain false; the evidence collection does not silently approve them.
 - The release audit therefore remains intentionally blocked by eight unapproved direct dependencies, four native components, and the MPL-2.0 certifi transitive dependency. No release tag should be created.
 - The expanded wheel-evidence gate passed on all three operating systems. The full CI test matrix is being rerun after updating its gate assertion to include the new wheelhouse workflow; the owner's local Windows acceptance test remains outstanding.
+
+
+## Final automated Phase 0 verification (2026-11-27)
+
+This section supersedes earlier "pending approval" and "pending build" notes above.
+
+### Results
+
+- Latest CI run: https://github.com/lucadilley09-a11y/CIE/actions/runs/45958230092 — **success**.
+  - 9/9 OS/Python test matrix jobs passed (Windows, Ubuntu, macOS; Python 3.11, 3.12, 3.13).
+  - 3/3 standalone MCPB builds passed; each executed \`--version\` and \`--doctor\` smoke tests.
+- Latest release audit: https://github.com/lucadilley09-a11y/CIE/actions/runs/45958230100 — **success**.
+  - \`pip-audit\`: no known vulnerabilities.
+  - Dependency/license policy passed for 37 runtime distributions.
+- Platform wheel evidence: 112 wheels across macOS arm64 (37), Linux x86_64 (37), and Windows AMD64 (38). Every external wheel SHA-256 matched the corresponding PyPI release JSON digest.
+- Evidence artifact: https://github.com/lucadilley09-a11y/CIE/actions/runs/45958230100/artifacts/15179871639
+  - Includes per-platform wheel hashes, license/notice file hashes, native binary hashes, PyPI source metadata, and a generated CycloneDX 1.5 SBOM (117 components).
+- \`certifi==2026.11.20\` is now an exact direct runtime pin, eliminating the earlier mismatch between the audit environment and standalone bundle.
+
+### Windows candidate
+
+- Artifact: https://github.com/lucadilley09-a11y/CIE/actions/runs/45958230092/artifacts/15179359044
+- MCPB SHA-256: \`a1b55c0240012512b79b6202654dc51dc7783f9574ae54037992a657379df651\`
+- Standalone package contains a generated CycloneDX SBOM with 37 runtime distributions plus 4 embedded native components.
+- \`THIRD_PARTY_LICENSES.json\` records 37 runtime distributions and 62 runtime license/notice files; the PyInstaller bootloader license/exception is also included.
+- \`BUILD_INFO.json\` confirms a self-contained Python runtime and successful Windows-hosted smoke tests.
+
+### License and provenance notes
+
+- Direct dependencies have exact pins, upstream release-tag references, and platform wheel hashes recorded.
+- NumPy/SciPy native notices identify OpenBLAS, LAPACK, GCC runtime library, and libquadmath. Their license notices are preserved in the bundle and their conditional/native approvals are recorded as project engineering decisions.
+- The wheel notices identify intended upstream sources, but the exact provenance of those bundled native binary builds is not independently attested. This evidence is not a legal opinion.
+
+### Remaining acceptance
+
+Automated Phase 0 gates are green. The only remaining acceptance action is the owner's local Windows import/launch check of the attached MCPB candidate. No final release tag has been created pending that local check.
