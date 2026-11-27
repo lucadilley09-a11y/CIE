@@ -321,7 +321,10 @@ def test_online_first_ci_covers_supported_python_and_native_platforms() -> None:
     assert "dependency-audit" in release["jobs"]
     assert "dependency-audit" in release["jobs"]["standalone-bundles"]["needs"]
     assert "offline-wheelhouse" not in ci["jobs"]
-    assert "platform-wheelhouses" not in release["jobs"]
+    assert "platform-wheelhouses" in release["jobs"]
+    assert release["jobs"]["verify-platform-wheelhouses"]["needs"] == "platform-wheelhouses"
+    assert release["jobs"]["dependency-audit"]["needs"] == "verify-platform-wheelhouses"
+    assert release["jobs"]["standalone-bundles"]["needs"] == "dependency-audit"
 
 
 def test_build_system_requirements_match_pep517_metadata() -> None:
