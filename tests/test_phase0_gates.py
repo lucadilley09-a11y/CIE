@@ -290,7 +290,7 @@ def test_online_first_ci_covers_supported_python_and_native_platforms() -> None:
     ci = yaml.safe_load((PROJECT_ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
     release = yaml.safe_load((PROJECT_ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8"))
     supported = ["3.11", "3.12", "3.13"]
-    platforms = ["ubuntu-22.04", "windows-2022", "macos-14"]
+    platforms = ["ubuntu-22.04", "windows-2022", "macos-15"]
     assert ci["jobs"]["tests"]["strategy"]["matrix"]["python-version"] == supported
     assert ci["jobs"]["tests"]["strategy"]["matrix"]["os"] == platforms
     assert ci["jobs"]["standalone"]["strategy"]["matrix"]["os"] == platforms
