@@ -260,11 +260,26 @@ def test_wheel_inventory_records_license_files_and_native_binaries(tmp_path: Pat
     with zipfile.ZipFile(path, "w") as archive:
         archive.writestr("soundfile-0.13.1.dist-info/METADATA", "Metadata-Version: 2.1\nName: soundfile\nVersion: 0.13.1\nLicense: BSD-3-Clause\n\n")
         archive.writestr("_soundfile_data/COPYING", b"native-library-license")
+        archive.writestr("_soundfile_data/LICENSE.txt", (
+            "Name: libquadmath\\n"
+            "Files: soundfile/.libs/libquadmath*.so\\n"
+            "Description: GCC runtime component\\n"
+            "Availability: https://gcc.gnu.org/\\n"
+            "License: LGPL-2.1-or-later\\n"
+        ))
         archive.writestr("_soundfile_data/libsndfile.so", b"native-binary")
     inventory = wheel_contents_inventory(path)
     assert inventory["license_metadata"]["license"] == "BSD-3-Clause"
     assert inventory["license_files"][0]["path"] == "_soundfile_data/COPYING"
     assert inventory["native_binaries"][0]["path"] == "_soundfile_data/libsndfile.so"
+    assert inventory["embedded_components"] == [{
+        "name": "libquadmath",
+        "declared_files": "soundfile/.libs/libquadmath*.so",
+        "description": "GCC runtime component",
+        "source_url": "https://gcc.gnu.org/",
+        "license": "LGPL-2.1-or-later",
+        "license_file": "_soundfile_data/LICENSE.txt",
+    }]
 
 
 def test_release_gate_requires_native_lgpl_component_approval() -> None:
