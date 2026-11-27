@@ -380,6 +380,13 @@ def do_ops(obj, ops: list) -> list:
         elif kind == "shade_smooth":
             apply_modifiers(obj)
             set_smooth(obj, float(op.get("angle", 30)) if op.get("angle", 30) is not None else None)
+            # Weighted normals: big flat faces decide their corners' normals, so large panels next to
+            # bevels stay flat instead of showing dark smudges (standard hard-surface shading).
+            wn = obj.modifiers.new("WeightedNormal", "WEIGHTED_NORMAL")
+            wn.mode = "FACE_AREA"
+            wn.weight = 100
+            wn.keep_sharp = True
+            apply_modifiers(obj)
         elif kind == "shade_flat":
             apply_modifiers(obj)
             obj.data.polygons.foreach_set("use_smooth", [False] * len(obj.data.polygons))
@@ -685,6 +692,9 @@ def op_bake(p: dict) -> dict:
         do_ops(high, p["material_ops"])
     # always unwrap fresh: CIE/box UVs may overlap, which ruins a bake
     smart_uv(low)
+    # Bake onto a smooth-shaded game mesh (sharp only at real corners): a flat-shaded low-poly makes the
+    # normal map fight every facet, which renders as harsh dark blotches.
+    set_smooth(low, float(p.get("smooth_angle", 60)))
     maps = bake(low, high, p["out_dir"], p["stem"], int(p.get("size", 1024)), p.get("maps", ["normal", "ao", "color"]), p.get("extrusion"))
     bpy.data.objects.remove(high, do_unlink=True)
     files = [export([low], os.path.join(p["out_dir"], f"{p['stem']}.{fmt}"), fmt) for fmt in p.get("formats", ["glb"])]

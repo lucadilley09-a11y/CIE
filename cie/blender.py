@@ -240,6 +240,12 @@ def bake_checks(m: Any, maps: dict[str, str]) -> list[dict[str, Any]]:
             continue
         if name == "normal":
             bad = (np.abs(px[..., 0] - 128) < 6) & (np.abs(px[..., 1] - 128) < 6) & (px[..., 2] < 40)
+            tilt = np.hypot(px[..., 0] - 128, px[..., 1] - 128)[mask]
+            strong = float((tilt > 70).mean()) if tilt.size else 0.0
+            if strong > 0.15:
+                out.append({"severity": "warn",
+                            "message": f"{strong:.0%} of the normal map tilts surfaces by more than ~35 degrees; that shades as dark blotches. "
+                                       "Bake onto a smoother game mesh (more segments) or keep the detail closer to it."})
         else:
             bad = px.max(axis=2) < 6
         frac = float((bad & mask).sum() / mask.sum())
@@ -296,6 +302,8 @@ def bake(args: dict[str, Any]) -> dict[str, Any]:
             raise ValueError("maps can be normal, ao, color, roughness.")
     if args.get("high"):
         params["high"] = str(resolve_input(args["high"]))
+    if args.get("smooth_angle") is not None:
+        params["smooth_angle"] = float(args["smooth_angle"])
     for key in ("high_ops", "material_ops"):
         if args.get(key):
             ops = [dict(o) for o in args[key]]
@@ -353,7 +361,7 @@ def register_capabilities(reg: Any) -> None:
         input_schema={"source": "str", "high": "optional str", "high_ops": "optional list[dict]", "material_ops": "optional list[dict]",
                       "maps": "optional list[str]", "size": "optional int", "extrusion": "optional float", "formats": "optional list[str]",
                       "engine": "optional str", "views": view_doc, "render": "optional bool", "render_size": "optional int",
-                      "name": "optional str", "timeout": "optional int"},
+                      "smooth_angle": "optional float", "name": "optional str", "timeout": "optional int"},
         permission="read", handler=wrap(bake, "Baked."), tags=["blender", "bake", "normal map", "textures"]))
     reg.register(CapabilitySpec(
         id="blender.materials", area="3d", summary="List Blender procedural material presets, ops and view presets.",
