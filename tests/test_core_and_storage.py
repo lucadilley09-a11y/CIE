@@ -37,13 +37,16 @@ class CoreAndStorageTests(unittest.TestCase):
         stale = jm.status("stale1")
         self.assertEqual(stale["status"], "interrupted")
 
+        import time
         submitted = jm.submit("core.diagnostics", lambda prog, ev: {"ok": True})
         res = None
-        for _ in range(50):
+        deadline = time.time() + 2
+        while time.time() < deadline:
             s = jm.status(submitted["job_id"])
             if s and s["status"] == "completed":
                 res = s
                 break
+            time.sleep(0.01)
         self.assertIsNotNone(res)
         self.assertEqual(res["result"], {"ok": True})
 
