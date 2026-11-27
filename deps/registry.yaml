@@ -33,8 +33,8 @@ packages:
 - name: certifi
   version: 2026.11.20
   license: MPL-2.0
-  tier: transitive
-  purpose: TLS certificate bundle required by the HTTP client dependency chain
+  tier: 1
+  purpose: Explicitly pinned TLS certificate bundle for deterministic runtime and standalone builds
   verification: MPL-2.0 notice retained; unmodified upstream package accepted for distribution
   release_approved: true
   provenance:
@@ -45,10 +45,10 @@ packages:
     verified: true
     note: Official upstream release tag 2026.11.20 resolves to bf6a4859116b0cba96673893e394298bbe529b1f; the exact platform wheel SHA-256 values are verified against PyPI release metadata in the Phase 0 wheelhouse evidence artifact.
   transitive_dependencies:
-    status: full-runtime-closure-recorded-in-hosted-audit
-    evidence_file: dependency-policy-report.json and pipdeptree JSON
+    status: exact-direct-runtime-pin; wheel-hashes-verified-on-all-platforms
+    evidence_file: platform-wheelhouse-evidence.json and dependency-policy-report.json
   wheel_availability:
-    status: observed-installed-in-hosted-audit
+    status: exact-wheel-verified-on-all-platforms
     targets:
       ubuntu_22_04_x64: observed
       windows_10_11_x64: observed
