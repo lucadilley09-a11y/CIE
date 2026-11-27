@@ -19,8 +19,6 @@ dependencies = [
   "numpy==2.2.3",
   "scipy==1.15.2",
   "tree-sitter==0.24.0",
-  "soundfile==0.13.1",
-  "pyloudnorm==0.2.0",
   "trimesh==4.11.1",
   "networkx==3.6.1",
 ]
