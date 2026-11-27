@@ -27,6 +27,30 @@ policy:
   note: Package metadata labels are provisional until wheel contents, native libraries,
     transitive dependencies, hashes, and provenance are audited.
 packages:
+- name: certifi
+  version: 2026.11.20
+  license: MPL-2.0
+  tier: transitive
+  purpose: TLS certificate bundle required by the HTTP client dependency chain
+  verification: CONDITIONAL-MPL-2.0-transitive-review-required
+  release_approved: false
+  provenance:
+    intended_distribution: PyPI
+    verified: false
+    note: Observed in the 2026-11-27 hosted dependency audit; upstream provenance and exact wheel artifact hash are not independently recorded.
+  transitive_dependencies:
+    status: observed-in-hosted-audit
+    evidence_file: dependency-policy-report.json and pipdeptree JSON
+  wheel_availability:
+    status: observed-installed-in-hosted-audit
+    targets:
+      ubuntu_22_04_x64: observed
+      windows_10_11_x64: not-yet-audited
+      macos_15_arm64: not-yet-audited
+    hashes: not-recorded
+  python_compatibility:
+    target: 3.11, 3.12, 3.13
+    verified: false
 - name: mcp
   version: 1.30.0
   license: MIT
