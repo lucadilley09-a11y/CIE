@@ -261,11 +261,11 @@ def test_wheel_inventory_records_license_files_and_native_binaries(tmp_path: Pat
         archive.writestr("soundfile-0.13.1.dist-info/METADATA", "Metadata-Version: 2.1\nName: soundfile\nVersion: 0.13.1\nLicense: BSD-3-Clause\n\n")
         archive.writestr("_soundfile_data/COPYING", b"native-library-license")
         archive.writestr("_soundfile_data/LICENSE.txt", (
-            "Name: libquadmath\\n"
-            "Files: soundfile/.libs/libquadmath*.so\\n"
-            "Description: GCC runtime component\\n"
-            "Availability: https://gcc.gnu.org/\\n"
-            "License: LGPL-2.1-or-later\\n"
+            "Name: libquadmath\n"
+            "Files: soundfile/.libs/libquadmath*.so\n"
+            "Description: GCC runtime component\n"
+            "Availability: https://gcc.gnu.org/\n"
+            "License: LGPL-2.1-or-later\n"
         ))
         archive.writestr("_soundfile_data/libsndfile.so", b"native-binary")
     inventory = wheel_contents_inventory(path)
