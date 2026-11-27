@@ -83,11 +83,11 @@ def wheel_contents_inventory(wheel_path: Path) -> dict[str, Any]:
                     "sha256": hashlib.sha256(payload).hexdigest(),
                 })
                 component_pattern = re.compile(
-                    r"(?m)^Name:\\s*(?P<name>[^\\r\\n]+)\\s*\\r?\\n"
-                    r"Files:\\s*(?P<files>[^\\r\\n]+)\\s*\\r?\\n"
-                    r"(?:Description:\\s*(?P<description>[^\\r\\n]+)\\s*\\r?\\n)?"
-                    r"Availability:\\s*(?P<url>[^\\r\\n]+)\\s*\\r?\\n"
-                    r"License:\\s*(?P<license>[^\\r\\n]+)"
+                    r"(?m)^Name:\s*(?P<name>[^\r\n]+)\s*\r?\n"
+                    r"Files:\s*(?P<files>[^\r\n]+)\s*\r?\n"
+                    r"(?:Description:\s*(?P<description>[^\r\n]+)\s*\r?\n)?"
+                    r"Availability:\s*(?P<url>[^\r\n]+)\s*\r?\n"
+                    r"License:\s*(?P<license>[^\r\n]+)"
                 )
                 for match in component_pattern.finditer(license_text):
                     embedded_components.append({
