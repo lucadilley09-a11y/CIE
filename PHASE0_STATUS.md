@@ -172,9 +172,23 @@ Checked every Phase 0 item in the owner's complete development plan (0.1–0.4) 
 | 0.2 Project registration | Done | `project.register/list/detect/update/remove`, CLI `cie project`, 10 regression tests |
 | 0.3 Unified index, consistent counts | Done | `eff.incremental_index` is the single writer; counts equality test |
 | 0.3 Incremental indexing, invalidation | Done | mtime + SHA-256 change detection, deleted-file cleanup, `index_meta` versioned re-index |
-| 0.3 Background updates | Not done | Indexing runs on demand (and before `brain`/`dependencies`/`search`); no file watcher |
-| 0.3 Asset metadata, project relationships in index | Not done | Planned with Phase 1.4 knowledge store |
+| 0.3 Background updates | Moved to Phase 1.4 (owner decision, 2026-11-27) | Indexing runs on demand (and before `brain`/`dependencies`/`search`); file watcher deferred |
+| 0.3 Asset metadata, project relationships in index | Moved to Phase 1.4 (owner decision, 2026-11-27) | Built with the project knowledge store |
 | 0.4 Regression tests per fix | Done | `tests/test_phase0_registration_and_index.py` |
 | 0.4 Error reporting, diagnostics, migration | Partial | Per-file index errors reported; index migration added; config migration pre-existed |
 
 The hosted runs above tested the commit before the 0.2/0.3 changes; CI must pass again on the new commit. Remaining owner action, per `docs/PHASE0_CI_EVIDENCE_2026-11-27.md`: import and launch the Windows MCPB candidate locally. Phase 0 closes when both are done.
+
+## Phase 0 closed (2026-11-27)
+
+Final owner-machine acceptance passed on Windows 11 with the CI #75 standalone build (`cie-standalone-windows-2022`, commit `3f3ac1c`) installed in Claude desktop:
+
+- `cie_status` healthy; registered project `cie_v2_3_2` preserved; autonomy `assist`.
+- All five `project.*` capabilities loaded; `project.list` ran in 7.5 ms.
+- First index run on the new build triggered the versioned full re-index as designed (`full_reindex: ["cie_v2_3_2"]`, 0.4 s) and removed 6 stale rows for deleted backup files.
+- Counts agree across `cie_status`, `coding.brain`, and `coding.dependencies`: 60 files, 405 symbols, 398 dependencies.
+- `coding.dependencies` with `max_edges: 3` returned 3 edges plus summary, `truncated: true`, `omitted: 395`.
+
+Hosted evidence for this commit: CIE CI run 46041053971 (5/5 jobs passed, including the first security scan) and release checks run 46041053963 (wheel evidence, verification, and dependency/vulnerability/license audit passed; release bundle skipped as designed without a version tag).
+
+**Phase 0 is complete.** Background re-indexing and asset metadata moved to Phase 1.4 by owner decision.
