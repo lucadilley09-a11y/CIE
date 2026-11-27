@@ -45,15 +45,15 @@ packages:
     verified: true
     note: Official upstream release tag 2026.11.20 resolves to bf6a4859116b0cba96673893e394298bbe529b1f; the exact platform wheel SHA-256 values are verified against PyPI release metadata in the Phase 0 wheelhouse evidence artifact.
   transitive_dependencies:
-    status: observed-in-hosted-audit
+    status: full-runtime-closure-recorded-in-hosted-audit
     evidence_file: dependency-policy-report.json and pipdeptree JSON
   wheel_availability:
     status: observed-installed-in-hosted-audit
     targets:
       ubuntu_22_04_x64: observed
       windows_10_11_x64: observed
-      macos_15_arm64: not-yet-audited
-    hashes: verified-in-platform-wheelhouse-evidence.json
+      macos_15_arm64: observed
+    hashes: verified-in-platform-wheelhouse-evidence.jsonon
   python_compatibility:
     target: 3.11, 3.12, 3.13
     verified: false
@@ -62,7 +62,7 @@ packages:
   license: MIT
   tier: 1
   purpose: MCP server protocol and FastMCP integration
-  verification: metadata-and-source-not-independently-audited
+  verification: official-upstream-release-tag-and-PyPI-wheel-hashes-verified
   release_approved: true
   provenance:
     source_repository: https://github.com/modelcontextprotocol/python-sdk
@@ -72,15 +72,15 @@ packages:
     verified: true
     note: Official upstream release tag v1.30.0 resolves to 8c2fa6eabacde869d75568e33b9d466b58c2f512; the exact platform wheel SHA-256 values are verified against PyPI release metadata in the Phase 0 wheelhouse evidence artifact.
   transitive_dependencies:
-    status: pending-installed-environment-audit
+    status: full-runtime-closure-recorded-in-hosted-audit
     evidence_file: pipdeptree JSON and dependency-policy-report.json
   wheel_availability:
-    status: pending-platform-build
+    status: wheel-present-on-all-three-platforms
     targets:
-      windows_10_11_x64: unverified
-      ubuntu_22_04_x64: unverified
-      macos_15_arm64: unverified
-    hashes: generated-per-target-in-wheelhouse-manifest.json
+      windows_10_11_x64: observed
+      ubuntu_22_04_x64: observed
+      macos_15_arm64: observed
+    hashes: verified-in-platform-wheelhouse-evidence.json
   python_compatibility:
     target: 3.11, 3.12, 3.13
     verified: false
@@ -90,7 +90,7 @@ packages:
   license: MIT
   tier: 1
   purpose: Structured dependency and configuration manifests
-  verification: metadata-and-source-not-independently-audited
+  verification: official-upstream-release-tag-and-PyPI-wheel-hashes-verified
   release_approved: true
   provenance:
     source_repository: https://github.com/yaml/pyyaml
@@ -100,15 +100,15 @@ packages:
     verified: true
     note: Official upstream release tag 6.0.2 resolves to 41309b0bcb4559edb1d691d47199035ef539d785; the exact platform wheel SHA-256 values are verified against PyPI release metadata in the Phase 0 wheelhouse evidence artifact.
   transitive_dependencies:
-    status: pending-installed-environment-audit
+    status: full-runtime-closure-recorded-in-hosted-audit
     evidence_file: pipdeptree JSON and dependency-policy-report.json
   wheel_availability:
-    status: pending-platform-build
+    status: wheel-present-on-all-three-platforms
     targets:
-      windows_10_11_x64: unverified
-      ubuntu_22_04_x64: unverified
-      macos_15_arm64: unverified
-    hashes: generated-per-target-in-wheelhouse-manifest.json
+      windows_10_11_x64: observed
+      ubuntu_22_04_x64: observed
+      macos_15_arm64: observed
+    hashes: verified-in-platform-wheelhouse-evidence.json
   python_compatibility:
     target: 3.11, 3.12, 3.13
     verified: false
@@ -118,7 +118,7 @@ packages:
   license: MIT-CMU
   tier: 1
   purpose: 2D image and sprite processing
-  verification: metadata-and-source-not-independently-audited
+  verification: official-upstream-release-tag-and-PyPI-wheel-hashes-verified
   release_approved: true
   provenance:
     source_repository: https://github.com/python-pillow/Pillow
@@ -128,15 +128,15 @@ packages:
     verified: true
     note: Official upstream release tag 13.0.0 resolves to 293218ad059d994baf1777d882911bed6a49704a; the exact platform wheel SHA-256 values are verified against PyPI release metadata in the Phase 0 wheelhouse evidence artifact.
   transitive_dependencies:
-    status: pending-installed-environment-audit
+    status: full-runtime-closure-recorded-in-hosted-audit
     evidence_file: pipdeptree JSON and dependency-policy-report.json
   wheel_availability:
-    status: pending-platform-build
+    status: wheel-present-on-all-three-platforms
     targets:
-      windows_10_11_x64: unverified
-      ubuntu_22_04_x64: unverified
-      macos_15_arm64: unverified
-    hashes: generated-per-target-in-wheelhouse-manifest.json
+      windows_10_11_x64: observed
+      ubuntu_22_04_x64: observed
+      macos_15_arm64: observed
+    hashes: verified-in-platform-wheelhouse-evidence.json
   python_compatibility:
     target: 3.11, 3.12, 3.13
     verified: false
@@ -146,7 +146,7 @@ packages:
   license: BSD-3-Clause
   tier: 1
   purpose: Numerical core
-  verification: metadata-and-source-not-independently-audited
+  verification: official-upstream-release-tag-and-PyPI-wheel-hashes-verified
   release_approved: true
   provenance:
     source_repository: https://github.com/numpy/numpy
@@ -156,15 +156,15 @@ packages:
     verified: true
     note: Official upstream release tag v2.2.3 resolves to a27456108104ac11e8564c2f18710997f3a55eb9; the exact platform wheel SHA-256 values are verified against PyPI release metadata in the Phase 0 wheelhouse evidence artifact.
   transitive_dependencies:
-    status: pending-installed-environment-audit
+    status: full-runtime-closure-recorded-in-hosted-audit
     evidence_file: pipdeptree JSON and dependency-policy-report.json
   wheel_availability:
-    status: pending-platform-build
+    status: wheel-present-on-all-three-platforms
     targets:
-      windows_10_11_x64: unverified
-      ubuntu_22_04_x64: unverified
-      macos_15_arm64: unverified
-    hashes: generated-per-target-in-wheelhouse-manifest.json
+      windows_10_11_x64: observed
+      ubuntu_22_04_x64: observed
+      macos_15_arm64: observed
+    hashes: verified-in-platform-wheelhouse-evidence.json
   python_compatibility:
     target: 3.11, 3.12, 3.13
     verified: false
@@ -174,7 +174,7 @@ packages:
   license: BSD-3-Clause
   tier: 1
   purpose: Numerical and signal-processing algorithms
-  verification: metadata-and-source-not-independently-audited
+  verification: official-upstream-release-tag-and-PyPI-wheel-hashes-verified
   release_approved: true
   provenance:
     source_repository: https://github.com/scipy/scipy
@@ -184,15 +184,15 @@ packages:
     verified: true
     note: Official upstream release tag v1.15.2 resolves to 0f1fd4a7268b813fa2b844ca6038e4dfdf90084a; the exact platform wheel SHA-256 values are verified against PyPI release metadata in the Phase 0 wheelhouse evidence artifact.
   transitive_dependencies:
-    status: pending-installed-environment-audit
+    status: full-runtime-closure-recorded-in-hosted-audit
     evidence_file: pipdeptree JSON and dependency-policy-report.json
   wheel_availability:
-    status: pending-platform-build
+    status: wheel-present-on-all-three-platforms
     targets:
-      windows_10_11_x64: unverified
-      ubuntu_22_04_x64: unverified
-      macos_15_arm64: unverified
-    hashes: generated-per-target-in-wheelhouse-manifest.json
+      windows_10_11_x64: observed
+      ubuntu_22_04_x64: observed
+      macos_15_arm64: observed
+    hashes: verified-in-platform-wheelhouse-evidence.json
   python_compatibility:
     target: 3.11, 3.12, 3.13
     verified: false
@@ -202,7 +202,7 @@ packages:
   license: MIT
   tier: 1
   purpose: Syntax-tree parsing
-  verification: metadata-and-source-not-independently-audited
+  verification: official-upstream-release-tag-and-PyPI-wheel-hashes-verified
   release_approved: true
   provenance:
     source_repository: https://github.com/tree-sitter/py-tree-sitter
@@ -212,15 +212,15 @@ packages:
     verified: true
     note: Official upstream release tag v0.24.0 resolves to f5282a01f1a4c6e39908f0516a6da94e9fd2b540; the exact platform wheel SHA-256 values are verified against PyPI release metadata in the Phase 0 wheelhouse evidence artifact.
   transitive_dependencies:
-    status: pending-installed-environment-audit
+    status: full-runtime-closure-recorded-in-hosted-audit
     evidence_file: pipdeptree JSON and dependency-policy-report.json
   wheel_availability:
-    status: pending-platform-build
+    status: wheel-present-on-all-three-platforms
     targets:
-      windows_10_11_x64: unverified
-      ubuntu_22_04_x64: unverified
-      macos_15_arm64: unverified
-    hashes: generated-per-target-in-wheelhouse-manifest.json
+      windows_10_11_x64: observed
+      ubuntu_22_04_x64: observed
+      macos_15_arm64: observed
+    hashes: verified-in-platform-wheelhouse-evidence.json
   python_compatibility:
     target: 3.11, 3.12, 3.13
     verified: false
@@ -230,7 +230,7 @@ packages:
   license: MIT
   tier: 1
   purpose: Mesh data structures and geometry operations
-  verification: metadata-and-source-not-independently-audited
+  verification: official-upstream-release-tag-and-PyPI-wheel-hashes-verified
   release_approved: true
   provenance:
     source_repository: https://github.com/mikedh/trimesh
@@ -240,15 +240,15 @@ packages:
     verified: true
     note: Official upstream release tag 4.11.1 resolves to 934ea6c3b70341caf41849552b623b78113f4ea7; the exact platform wheel SHA-256 values are verified against PyPI release metadata in the Phase 0 wheelhouse evidence artifact.
   transitive_dependencies:
-    status: pending-installed-environment-audit
+    status: full-runtime-closure-recorded-in-hosted-audit
     evidence_file: pipdeptree JSON and dependency-policy-report.json
   wheel_availability:
-    status: pending-platform-build
+    status: wheel-present-on-all-three-platforms
     targets:
-      windows_10_11_x64: unverified
-      ubuntu_22_04_x64: unverified
-      macos_15_arm64: unverified
-    hashes: generated-per-target-in-wheelhouse-manifest.json
+      windows_10_11_x64: observed
+      ubuntu_22_04_x64: observed
+      macos_15_arm64: observed
+    hashes: verified-in-platform-wheelhouse-evidence.json
   python_compatibility:
     target: 3.11, 3.12, 3.13
     verified: false
@@ -258,7 +258,7 @@ packages:
   license: BSD-3-Clause
   tier: 1
   purpose: Graph operations required by trimesh mesh repair
-  verification: metadata-and-source-not-independently-audited
+  verification: official-upstream-release-tag-and-PyPI-wheel-hashes-verified
   release_approved: true
   provenance:
     source_repository: https://github.com/networkx/networkx
@@ -268,15 +268,15 @@ packages:
     verified: true
     note: Official upstream release tag networkx-3.6.1 resolves to 7530809bfa1ea7ed6fdf918a4d1431488953cb1f; the exact platform wheel SHA-256 values are verified against PyPI release metadata in the Phase 0 wheelhouse evidence artifact.
   transitive_dependencies:
-    status: pending-installed-environment-audit
+    status: full-runtime-closure-recorded-in-hosted-audit
     evidence_file: pipdeptree JSON and dependency-policy-report.json
   wheel_availability:
-    status: pending-platform-build
+    status: wheel-present-on-all-three-platforms
     targets:
-      windows_10_11_x64: unverified
-      ubuntu_22_04_x64: unverified
-      macos_15_arm64: unverified
-    hashes: generated-per-target-in-wheelhouse-manifest.json
+      windows_10_11_x64: observed
+      ubuntu_22_04_x64: observed
+      macos_15_arm64: observed
+    hashes: verified-in-platform-wheelhouse-evidence.json
   python_compatibility:
     target: 3.11, 3.12, 3.13
     verified: false
