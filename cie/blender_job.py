@@ -667,7 +667,9 @@ def op_info(p: dict) -> dict:
 def op_process(p: dict) -> dict:
     clear_scene()
     objs = import_file(p["input"])
-    bake_transforms(objs)
+    # Don't weld here: models made of touching parts (a crate's rails and posts) would fuse and then
+    # tear apart under bevels and booleans. Welding is only for baking, where smooth shading needs it.
+    bake_transforms(objs, weld=bool(p.get("weld", False)))
     obj = join(objs) if p.get("join", True) else objs[0]
     before = mesh_stats([obj])
     applied = do_ops(obj, p.get("ops", []))
@@ -695,7 +697,7 @@ def op_render(p: dict) -> dict:
 def op_bake(p: dict) -> dict:
     clear_scene()
     low = join(import_file(p["low"]))
-    bake_transforms([low])
+    bake_transforms([low], weld=True)
     if p.get("high"):
         high = join(import_file(p["high"]))
         bake_transforms([high])
